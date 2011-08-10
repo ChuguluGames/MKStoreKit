@@ -30,6 +30,7 @@
 //	4) A paypal donation to mugunth.kumar@gmail.com
 
 #import "MKSKProduct.h"
+#import "MKSKRequestHelper.h"
 
 static void (^onReviewRequestVerificationSucceeded)();
 static void (^onReviewRequestVerificationFailed)();
@@ -54,9 +55,29 @@ static NSMutableData *sDataFromConnection;
     return self;
 }
 
+- (void) dealloc {
+    self.productId = nil;
+    self.receipt = nil;
+    [super dealloc];
+}
 
 #pragma mark -
 #pragma mark In-App purchases promo codes support
+
++ (NSDictionary*) receiptPostData:(NSData*)receipt {
+	NSString *receiptDataString = [[NSString alloc] initWithData:receipt 
+                                                        encoding:NSASCIIStringEncoding];
+    
+	NSDictionary *postData = [NSDictionary dictionaryWithObject:receiptDataString forKey:@"receiptdata"];
+	[receiptDataString release];
+    return postData;
+}
+
++ (NSDictionary*) productForReviewAccessPostData:(NSString*)productId {
+    NSString *uniqueID = [[UIDevice currentDevice] uniqueIdentifier];
+    return [NSDictionary dictionaryWithObjectsAndKeys:productId, @"productid", uniqueID, @"udid", nil];
+}
+
 // This function is only used if you want to enable in-app purchases for free for reviewers
 // Read my blog post http://mk.sg/31
 
@@ -72,27 +93,13 @@ static NSMutableData *sDataFromConnection;
         [onReviewRequestVerificationFailed release];
         onReviewRequestVerificationFailed = [errorBlock copy];
 
-     	NSString *uniqueID = [[UIDevice currentDevice] uniqueIdentifier];
         // check udid and featureid with developer's server
-		
-        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, @"featureCheck.php"]];
+        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, VERIFY_PRODUCT_FOR_REVIEW_PATH]];
         
-        NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:url 
-                                                                  cachePolicy:NSURLRequestReloadIgnoringCacheData 
-                                                              timeoutInterval:60];
-        
-        [theRequest setHTTPMethod:@"POST"];		
-        [theRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
-        
-        NSString *postData = [NSString stringWithFormat:@"productid=%@&udid=%@", productId, uniqueID];
-        
-        NSString *length = [NSString stringWithFormat:@"%d", [postData length]];	
-        [theRequest setValue:length forHTTPHeaderField:@"Content-Length"];	
-        
-        [theRequest setHTTPBody:[postData dataUsingEncoding:NSASCIIStringEncoding]];
-        
+        NSURLRequest *theRequest = [MKSKRequestHelper buildRequestWithString:[MKSKRequestHelper buildPostDataString:[[self class] productForReviewAccessPostData:productId]]
+                                                                      forURL:url];
         sConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];    
-        [sConnection start];	
+        [sConnection start];
     }
     else
     {
@@ -106,26 +113,11 @@ static NSMutableData *sDataFromConnection;
     self.onReceiptVerificationSucceeded = completionBlock;
     self.onReceiptVerificationFailed = errorBlock;
     
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, @"verifyProduct.php"]];
-	
-	NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:url 
-                                                              cachePolicy:NSURLRequestReloadIgnoringCacheData 
-                                                          timeoutInterval:60];
-	
-	[theRequest setHTTPMethod:@"POST"];		
-	[theRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
-	
-	NSString *receiptDataString = [[NSString alloc] initWithData:self.receipt 
-                                                        encoding:NSASCIIStringEncoding];
-    
-	NSString *postData = [NSString stringWithFormat:@"receiptdata=%@", receiptDataString];
-	[receiptDataString release];
-	
-	NSString *length = [NSString stringWithFormat:@"%d", [postData length]];	
-	[theRequest setValue:length forHTTPHeaderField:@"Content-Length"];	
-	
-	[theRequest setHTTPBody:[postData dataUsingEncoding:NSASCIIStringEncoding]];
-	
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, VERIFY_RECEIPT_PATH]];
+
+	NSURLRequest *theRequest = [MKSKRequestHelper buildRequestWithString:[MKSKRequestHelper buildPostDataString:[[self class] receiptPostData:self.receipt]]
+                                                                  forURL:url];
+
     self.theConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];    
     [self.theConnection start];	
 }
@@ -148,13 +140,12 @@ didReceiveResponse:(NSURLResponse *)response
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
-    NSString *responseString = [[[NSString alloc] initWithData:self.dataFromConnection 
-                                                      encoding:NSASCIIStringEncoding] 
-                                autorelease];
+    NSString *responseString = [[NSString alloc] initWithData:self.dataFromConnection 
+                                                     encoding:NSASCIIStringEncoding];
 	
     self.dataFromConnection = nil;
 
-	if([responseString isEqualToString:@"YES"])		
+	if([responseString isEqualToString:RESPONSE_SUCCESS])		
 	{
         if(self.onReceiptVerificationSucceeded)
         {
@@ -204,13 +195,12 @@ didReceiveResponse:(NSURLResponse *)response
 
 + (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
-    NSString *responseString = [[[NSString alloc] initWithData:sDataFromConnection 
-                                                      encoding:NSASCIIStringEncoding] 
-                                autorelease];
+    NSString *responseString = [[NSString alloc] initWithData:sDataFromConnection 
+                                                     encoding:NSASCIIStringEncoding];
 	
     [sDataFromConnection release], sDataFromConnection = nil;
 
-	if([responseString isEqualToString:@"YES"])		
+	if([responseString isEqualToString:RESPONSE_SUCCESS])		
 	{
         if(onReviewRequestVerificationSucceeded)
         {
