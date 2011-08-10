@@ -32,6 +32,7 @@
 
 #import "MKSKSubscriptionProduct.h"
 #import "NSData+Base64.h"
+#import "MKSKRequestHelper.h"
 
 @implementation MKSKSubscriptionProduct
 @synthesize onSubscriptionVerificationFailed;
@@ -61,21 +62,9 @@
     self.onSubscriptionVerificationFailed = errorBlock;
     
     NSURL *url = [NSURL URLWithString:kReceiptValidationURL];
-	
-	NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:url 
-                                                              cachePolicy:NSURLRequestReloadIgnoringCacheData 
-                                                          timeoutInterval:60];
-	
-	[theRequest setHTTPMethod:@"POST"];		
-	[theRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
-	
-    NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kSharedSecret];        
-    
-	NSString *length = [NSString stringWithFormat:@"%d", [receiptString length]];	
-	[theRequest setValue:length forHTTPHeaderField:@"Content-Length"];	
-	
-	[theRequest setHTTPBody:[receiptString dataUsingEncoding:NSUTF8StringEncoding]];
-	
+
+    NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kSharedSecret];
+    NSURLRequest* theRequest = [MKSKRequestHelper buildRequestWithString:receiptString forURL:url];
     self.theConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];    
     [self.theConnection start];    
 }
