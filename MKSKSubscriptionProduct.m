@@ -55,6 +55,17 @@
     return self;
 }
 
+- (void) dealloc {
+    self.productId = nil;
+    self.theConnection = nil;
+    self.receipt = nil;
+    self.verifiedReceiptDictionary = nil;
+    self.dataFromConnection = nil;
+    self.onSubscriptionVerificationFailed = nil;
+    self.onSubscriptionVerificationCompleted = nil;
+    [super dealloc];
+}
+
 - (void) verifyReceiptOnComplete:(void (^)(NSNumber*)) completionBlock
                          onError:(void (^)(NSError*)) errorBlock
 {        

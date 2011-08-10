@@ -59,6 +59,10 @@ static NSMutableData *sDataFromConnection;
 - (void) dealloc {
     self.productId = nil;
     self.receipt = nil;
+    self.theConnection = nil;
+    self.dataFromConnection = nil;
+    self.onReceiptVerificationFailed = nil;
+    self.onReceiptVerificationSucceeded = nil;
     [super dealloc];
 }
 
