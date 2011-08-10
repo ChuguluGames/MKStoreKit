@@ -40,7 +40,7 @@
 
 @interface MKStoreManager () //private methods and properties
 
-@property (nonatomic, copy) void (^onTransactionCancelled)();
+@property (nonatomic, copy) void (^onTransactionCancelled)(NSError *error);
 @property (nonatomic, copy) void (^onTransactionCompleted)(NSString *productId);
 
 @property (nonatomic, copy) void (^onRestoreFailed)(NSError* error);
@@ -70,6 +70,8 @@
 @synthesize onTransactionCompleted;
 @synthesize onRestoreFailed;
 @synthesize onRestoreCompleted;
+
+@synthesize customProductPostDataClassForVerification;
 
 static MKStoreManager* _sharedStoreManager;
 
@@ -142,15 +144,17 @@ static MKStoreManager* _sharedStoreManager;
 	@synchronized(self) {
 		
         if (_sharedStoreManager == nil) {
-            
 #if TARGET_IPHONE_SIMULATOR
 			NSLog(@"You are running in Simulator MKStoreKit runs only on devices");
 #else
-            _sharedStoreManager = [[self alloc] init];					
+            _sharedStoreManager = [[self alloc] init];
 			_sharedStoreManager.purchasableObjects = [[NSMutableArray alloc] init];
-			[_sharedStoreManager requestProductData];						
+            [_sharedStoreManager.purchasableObjects release];
+            _sharedStoreManager.customProductPostDataClassForVerification = [MKSKProduct class];
+			[_sharedStoreManager requestProductData];
 			_sharedStoreManager.storeObserver = [[MKStoreObserver alloc] init];
-			[[SKPaymentQueue defaultQueue] addTransactionObserver:_sharedStoreManager.storeObserver];            
+            [_sharedStoreManager.storeObserver release];
+			[[SKPaymentQueue defaultQueue] addTransactionObserver:_sharedStoreManager.storeObserver];
             [_sharedStoreManager startVerifyingSubscriptionReceipts];
 #endif
         }
@@ -379,7 +383,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 
 - (void) buyFeature:(NSString*) featureId
          onComplete:(void (^)(NSString*)) completionBlock         
-        onCancelled:(void (^)(void)) cancelBlock
+        onCancelled:(void (^)(NSError*)) cancelBlock
 {
     self.onTransactionCompleted = completionBlock;
     self.onTransactionCancelled = cancelBlock;
@@ -530,12 +534,14 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
             [thisProduct verifyReceiptOnComplete:^
              {
                  [self rememberPurchaseOfProduct:productIdentifier];
+                 if (self.onTransactionCompleted)
+                     self.onTransactionCompleted(productIdentifier);
              }
                                          onError:^(NSError* error)
              {
                  if(self.onTransactionCancelled)
                  {
-                     self.onTransactionCancelled(productIdentifier);
+                     self.onTransactionCancelled(error);
                  }
                  else
                  {
@@ -546,7 +552,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
         else
         {
             [self rememberPurchaseOfProduct:productIdentifier];
-            if(self.onTransactionCompleted)
+            if (self.onTransactionCompleted)
                 self.onTransactionCompleted(productIdentifier);
         }                
     }
@@ -582,7 +588,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 #endif
     
     if(self.onTransactionCancelled)
-        self.onTransactionCancelled();
+        self.onTransactionCancelled(nil);
 }
 
 - (void) failedTransaction: (SKPaymentTransaction *)transaction
@@ -602,7 +608,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 	[alert release];
     
     if(self.onTransactionCancelled)
-        self.onTransactionCancelled();
+        self.onTransactionCancelled(nil);
 }
 
 @end

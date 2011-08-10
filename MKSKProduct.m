@@ -29,6 +29,7 @@
 //	3) or a tweet mentioning @mugunthkumar
 //	4) A paypal donation to mugunth.kumar@gmail.com
 
+#include <objc/runtime.h>
 #import "MKSKProduct.h"
 #import "MKSKRequestHelper.h"
 
@@ -95,8 +96,15 @@ static NSMutableData *sDataFromConnection;
 
         // check udid and featureid with developer's server
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, VERIFY_PRODUCT_FOR_REVIEW_PATH]];
-        
-        NSURLRequest *theRequest = [MKSKRequestHelper buildRequestWithString:[MKSKRequestHelper buildPostDataString:[[self class] productForReviewAccessPostData:productId]]
+
+        NSDictionary* postData = nil;
+        Class postDataClass = [MKStoreManager sharedManager].customProductPostDataClassForVerification;
+        if (class_conformsToProtocol(postDataClass, @protocol(MKSKProductPostDataForVerification)))
+            postData = [postDataClass productForReviewAccessPostData:productId];
+        else
+            postData = [[self class] productForReviewAccessPostData:productId];
+
+        NSURLRequest *theRequest = [MKSKRequestHelper buildRequestWithString:[MKSKRequestHelper buildPostDataString:postData]
                                                                       forURL:url];
         sConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];    
         [sConnection start];
@@ -112,10 +120,17 @@ static NSMutableData *sDataFromConnection;
 {
     self.onReceiptVerificationSucceeded = completionBlock;
     self.onReceiptVerificationFailed = errorBlock;
-    
+
     NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, VERIFY_RECEIPT_PATH]];
 
-	NSURLRequest *theRequest = [MKSKRequestHelper buildRequestWithString:[MKSKRequestHelper buildPostDataString:[[self class] receiptPostData:self.receipt]]
+    NSDictionary* postData = nil;
+    Class postDataClass = [MKStoreManager sharedManager].customProductPostDataClassForVerification;
+    if (class_conformsToProtocol(postDataClass, @protocol(MKSKProductPostDataForVerification)))
+        postData = [postDataClass receiptPostData:self.receipt];
+    else
+        postData = [[self class] receiptPostData:self.receipt];
+
+	NSURLRequest *theRequest = [MKSKRequestHelper buildRequestWithString:[MKSKRequestHelper buildPostDataString:postData]
                                                                   forURL:url];
 
     self.theConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];    
@@ -149,7 +164,7 @@ didReceiveResponse:(NSURLResponse *)response
 	{
         if(self.onReceiptVerificationSucceeded)
         {
-            self.onReceiptVerificationSucceeded();
+            self.onReceiptVerificationSucceeded(nil);
             self.onReceiptVerificationSucceeded = nil;
         }
 	}
@@ -227,7 +242,7 @@ didReceiveResponse:(NSURLResponse *)response
 
     if(onReviewRequestVerificationFailed)
     {
-        onReviewRequestVerificationFailed(nil);    
+        onReviewRequestVerificationFailed(error);    
         [onReviewRequestVerificationFailed release], onReviewRequestVerificationFailed = nil;
     }
 }

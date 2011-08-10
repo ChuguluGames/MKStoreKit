@@ -51,7 +51,17 @@
 #define kSubscriptionsPurchasedNotification @"MKStoreKitSubscriptionsPurchased"
 #define kSubscriptionsInvalidNotification @"MKStoreKitSubscriptionsInvalid"
 
+@protocol MKSKProductPostDataForVerification <NSObject>
+
++ (NSDictionary*) receiptPostData:(NSData*)receipt;
++ (NSDictionary*) productForReviewAccessPostData:(NSString*)productId;
+
+@end
+
+
 @interface MKStoreManager : NSObject<SKProductsRequestDelegate>
+
+@property (nonatomic, assign) Class customProductPostDataClassForVerification;
 
 // These are the methods you will be using in your app
 + (MKStoreManager*)sharedManager;
@@ -65,7 +75,7 @@
 // use this method to invoke a purchase
 - (void) buyFeature:(NSString*) featureId
          onComplete:(void (^)(NSString*)) completionBlock         
-        onCancelled:(void (^)(void)) cancelBlock;
+        onCancelled:(void (^)(NSError*)) cancelBlock;
 
 // use this method to restore a purchase
 - (void) restorePreviousTransactionsOnComplete:(void (^)(void)) completionBlock

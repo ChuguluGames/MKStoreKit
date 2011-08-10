@@ -32,11 +32,12 @@
 
 #import <Foundation/Foundation.h>
 #import "MKStoreKitConfigs.h"
+#import "MKStoreManager.h"
 
-@interface MKSKProduct : NSObject 
+@interface MKSKProduct : NSObject<MKSKProductPostDataForVerification>
 
 @property (nonatomic, copy) void (^onReceiptVerificationSucceeded)();
-@property (nonatomic, copy) void (^onReceiptVerificationFailed)();
+@property (nonatomic, copy) void (^onReceiptVerificationFailed)(NSError*);
 
 @property (nonatomic, retain) NSData *receipt;
 

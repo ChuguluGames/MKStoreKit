@@ -46,7 +46,7 @@
 #define OWN_SERVER                      nil
 #define VERIFY_PRODUCT_FOR_REVIEW_PATH  @"featureCheck.php"
 #define VERIFY_RECEIPT_PATH             @"verifyProduct.php"
-#define RESPONSE_SUCCESS                @"YES"
+#define RESPONSE_SUCCESS                @"OK"
 
 #warning Shared Secret Missing Ignore this warning if you don't use auto-renewable subscriptions
 #define kSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
