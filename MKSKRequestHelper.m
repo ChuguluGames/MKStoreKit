@@ -9,6 +9,7 @@
  *******************************************************************************/
 
 #import "MKSKRequestHelper.h"
+#import "MKStoreManager.h"
 
 @implementation MKSKRequestHelper
 
@@ -32,6 +33,8 @@
 	[theRequest setValue:length forHTTPHeaderField:@"Content-Length"];	
 	
 	[theRequest setHTTPBody:[postString dataUsingEncoding:NSASCIIStringEncoding]];
+    if ([MKStoreManager sharedManager].customRequestProcessingBlock)
+        [MKStoreManager sharedManager].customRequestProcessingBlock(theRequest);
     return theRequest;
 }
 

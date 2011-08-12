@@ -51,17 +51,11 @@
 #define kSubscriptionsPurchasedNotification @"MKStoreKitSubscriptionsPurchased"
 #define kSubscriptionsInvalidNotification @"MKStoreKitSubscriptionsInvalid"
 
-@protocol MKSKProductPostDataForVerification <NSObject>
-
-+ (NSDictionary*) receiptPostData:(NSData*)receipt;
-+ (NSDictionary*) productForReviewAccessPostData:(NSString*)productId;
-
-@end
-
-
 @interface MKStoreManager : NSObject<SKProductsRequestDelegate>
 
-@property (nonatomic, assign) Class customProductPostDataClassForVerification;
+@property (nonatomic, copy) void (^customRequestProcessingBlock)(NSMutableURLRequest*);
+@property (nonatomic, copy) NSDictionary* (^customReceiptPostData)(NSData* receipt);
+@property (nonatomic, copy) NSDictionary* (^customProductForReviewAccessPostData)(NSString* productId);
 
 // These are the methods you will be using in your app
 + (MKStoreManager*)sharedManager;

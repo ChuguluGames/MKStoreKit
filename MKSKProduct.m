@@ -102,9 +102,8 @@ static NSMutableData *sDataFromConnection;
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, VERIFY_PRODUCT_FOR_REVIEW_PATH]];
 
         NSDictionary* postData = nil;
-        Class postDataClass = [MKStoreManager sharedManager].customProductPostDataClassForVerification;
-        if (class_conformsToProtocol(postDataClass, @protocol(MKSKProductPostDataForVerification)))
-            postData = [postDataClass productForReviewAccessPostData:productId];
+        if ([MKStoreManager sharedManager].customProductForReviewAccessPostData)
+            postData = [MKStoreManager sharedManager].customProductForReviewAccessPostData(productId);
         else
             postData = [[self class] productForReviewAccessPostData:productId];
 
@@ -128,9 +127,8 @@ static NSMutableData *sDataFromConnection;
     NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, VERIFY_RECEIPT_PATH]];
 
     NSDictionary* postData = nil;
-    Class postDataClass = [MKStoreManager sharedManager].customProductPostDataClassForVerification;
-    if (class_conformsToProtocol(postDataClass, @protocol(MKSKProductPostDataForVerification)))
-        postData = [postDataClass receiptPostData:self.receipt];
+    if ([MKStoreManager sharedManager].customReceiptPostData)
+        postData = [MKStoreManager sharedManager].customReceiptPostData(self.receipt);
     else
         postData = [[self class] receiptPostData:self.receipt];
 

@@ -71,12 +71,16 @@
 @synthesize onRestoreFailed;
 @synthesize onRestoreCompleted;
 
-@synthesize customProductPostDataClassForVerification;
+@synthesize customRequestProcessingBlock;
+@synthesize customReceiptPostData;
+@synthesize customProductForReviewAccessPostData;
 
 static MKStoreManager* _sharedStoreManager;
 
 - (void)dealloc {
-    
+    self.customProductForReviewAccessPostData = nil;
+    self.customReceiptPostData = nil;
+    self.customRequestProcessingBlock = nil;
     [_purchasableObjects release], _purchasableObjects = nil;
     [_storeObserver release], _storeObserver = nil;
     [onTransactionCancelled release], onTransactionCancelled = nil;
@@ -150,7 +154,9 @@ static MKStoreManager* _sharedStoreManager;
             _sharedStoreManager = [[self alloc] init];
 			_sharedStoreManager.purchasableObjects = [[NSMutableArray alloc] init];
             [_sharedStoreManager.purchasableObjects release];
-            _sharedStoreManager.customProductPostDataClassForVerification = [MKSKProduct class];
+            _sharedStoreManager.customReceiptPostData = nil;
+            _sharedStoreManager.customProductForReviewAccessPostData = nil;
+            _sharedStoreManager.customRequestProcessingBlock = nil;
 			[_sharedStoreManager requestProductData];
 			_sharedStoreManager.storeObserver = [[MKStoreObserver alloc] init];
             [_sharedStoreManager.storeObserver release];
