@@ -36,17 +36,45 @@
 // To avoid making mistakes map plist entries to macros on this page.
 // when you include MKStoreManager in your clss, these macros get defined there
 
+#ifndef kConsumableBaseFeatureId
 #define kConsumableBaseFeatureId    @"com.mycompany.myapp."
-#define kFeatureAId                 @"com.mugunthkumar.subinapptest.wk1"
-#define kConsumableFeatureBId       @"com.mycompany.myapp.005"
-#define FishBasket                  @"FishBasket"
+#endif
 
+#ifndef kFeatureAId
+#define kFeatureAId                 @"com.mugunthkumar.subinapptest.wk1"
+#endif
+
+#ifndef kConsumableBaseFeatureId
+#define kConsumableFeatureBId       @"com.mycompany.myapp.005"
+#endif
+
+#ifndef FishBasket
+#define FishBasket                  @"FishBasket"
+#endif
+
+#ifndef REVIEW_ALLOWED
 #define REVIEW_ALLOWED          0
+#endif
+
+#ifndef SERVER_PRODUCT_MODEL
 #define SERVER_PRODUCT_MODEL    1
+#endif
+
+#ifndef OWN_SERVER
 #define OWN_SERVER                      nil
+#endif
+
+#ifndef VERIFY_PRODUCT_FOR_REVIEW_PATH
 #define VERIFY_PRODUCT_FOR_REVIEW_PATH  @"featureCheck.php"
+#endif
+
+#ifndef VERIFY_RECEIPT_PATH
 #define VERIFY_RECEIPT_PATH             @"verifyProduct.php"
-#define RESPONSE_SUCCESS                @"OK"
+#endif
+
+#ifndef RESPONSE_SUCCESS
+#define RESPONSE_SUCCESS                @"YES"
+#endif
 
 #warning Shared Secret Missing Ignore this warning if you don't use auto-renewable subscriptions
 #define kSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
