@@ -110,7 +110,7 @@ static MKStoreManager* _sharedStoreManager;
     NSError *error = nil;
     [SFHFKeychainUtils storeUsername:key 
                          andPassword:objectString
-                      forServiceName:@"MKStoreKit"
+                      forServiceName:kMKSKServiceName
                       updateExisting:YES 
                                error:&error];
     
@@ -122,7 +122,7 @@ static MKStoreManager* _sharedStoreManager;
 {
     NSError *error = nil;
     NSObject *object = [SFHFKeychainUtils getPasswordForUsername:key 
-                                                  andServiceName:@"MKStoreKit" 
+                                                  andServiceName:kMKSKServiceName 
                                                            error:&error];
     if(error)
         NSLog(@"%@", [error localizedDescription]);
@@ -247,9 +247,9 @@ static MKStoreManager* _sharedStoreManager;
 -(void) requestProductData
 {
     NSMutableArray *productsArray = [NSMutableArray array];
-    NSArray *consumables = [[[self storeKitItems] objectForKey:@"Consumables"] allKeys];
-    NSArray *nonConsumables = [[self storeKitItems] objectForKey:@"Non-Consumables"];
-    NSArray *subscriptions = [[[self storeKitItems] objectForKey:@"Subscriptions"] allKeys];
+    NSArray *consumables = [[[self storeKitItems] objectForKey:kMKSKConfigConsumablesKey] allKeys];
+    NSArray *nonConsumables = [[self storeKitItems] objectForKey:kMKSKConfigNonConsumablesKey];
+    NSArray *subscriptions = [[[self storeKitItems] objectForKey:kMKSKConfigSubscriptionsKey] allKeys];
     
     [productsArray addObjectsFromArray:consumables];
     [productsArray addObjectsFromArray:nonConsumables];
@@ -261,9 +261,9 @@ static MKStoreManager* _sharedStoreManager;
 }
 - (BOOL) removeAllKeychainData {
     NSMutableArray *productsArray = [NSMutableArray array];
-    NSArray *consumables = [[[self storeKitItems] objectForKey:@"Consumables"] allKeys];
-    NSArray *nonConsumables = [[self storeKitItems] objectForKey:@"Non-Consumables"];
-    NSArray *subscriptions = [[[self storeKitItems] objectForKey:@"Subscriptions"] allKeys];
+    NSArray *consumables = [[[self storeKitItems] objectForKey:kMKSKConfigConsumablesKey] allKeys];
+    NSArray *nonConsumables = [[self storeKitItems] objectForKey:kMKSKConfigNonConsumablesKey];
+    NSArray *subscriptions = [[[self storeKitItems] objectForKey:kMKSKConfigSubscriptionsKey] allKeys];
     
     [productsArray addObjectsFromArray:consumables];
     [productsArray addObjectsFromArray:nonConsumables];
@@ -274,7 +274,7 @@ static MKStoreManager* _sharedStoreManager;
     
     //loop through all the saved keychain data and remove it    
     for (int i = 0; i < itemCount; i++ ) {
-        [SFHFKeychainUtils deleteItemForUsername:[productsArray objectAtIndex:i] andServiceName:@"MKStoreKit" error:&error];
+        [SFHFKeychainUtils deleteItemForUsername:[productsArray objectAtIndex:i] andServiceName:kMKSKServiceName error:&error];
     }
     if (!error) {
         return YES; 
@@ -303,7 +303,7 @@ static MKStoreManager* _sharedStoreManager;
 	[request autorelease];
 	
 	isProductsAvailable = YES;    
-    [[NSNotificationCenter defaultCenter] postNotificationName:kProductFetchedNotification 
+    [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKProductFetchedNotification 
                                                         object:[NSNumber numberWithBool:isProductsAvailable]];
 }
 
@@ -312,7 +312,7 @@ static MKStoreManager* _sharedStoreManager;
 	[request autorelease];
 	
 	isProductsAvailable = NO;	
-    [[NSNotificationCenter defaultCenter] postNotificationName:kProductFetchedNotification 
+    [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKProductFetchedNotification 
                                                         object:[NSNumber numberWithBool:isProductsAvailable]];
 }
 
@@ -473,7 +473,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 
 - (void) startVerifyingSubscriptionReceipts
 {
-    NSDictionary *subscriptions = [[self storeKitItems] objectForKey:@"Subscriptions"];
+    NSDictionary *subscriptions = [[self storeKitItems] objectForKey:kMKSKConfigSubscriptionsKey];
     
     self.subscriptionProducts = [NSMutableDictionary dictionary];
     for(NSString *productId in [subscriptions allKeys])
@@ -487,7 +487,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
              {
                  if([isActive boolValue] == NO)
                  {
-                     [[NSNotificationCenter defaultCenter] postNotificationName:kSubscriptionsInvalidNotification 
+                     [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKSubscriptionsInvalidNotification 
                                                                          object:product.productId];
                      
                      NSLog(@"Subscription: %@ is inactive", product.productId);
@@ -518,7 +518,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
         subscriptionProduct.receipt = receiptData;
         [subscriptionProduct verifyReceiptOnComplete:^(NSNumber* isActive)
          {
-             [[NSNotificationCenter defaultCenter] postNotificationName:kSubscriptionsPurchasedNotification 
+             [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKSubscriptionsPurchasedNotification 
                                                                  object:productIdentifier];
 
              [MKStoreManager setObject:receiptData forKey:productIdentifier];             
@@ -530,29 +530,20 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
     }        
     else
     {
-        if(OWN_SERVER && SERVER_PRODUCT_MODEL)
+        if(MKSK_USE_REMOTE_PRODUCT_SERVER && MKSK_REMOTE_PRODUCT_MODEL)
         {
             // ping server and get response before serializing the product
             // this is a blocking call to post receipt data to your server
             // it should normally take a couple of seconds on a good 3G connection
             MKSKProduct *thisProduct = [[[MKSKProduct alloc] initWithProductId:productIdentifier receiptData:receiptData] autorelease];
             
-            [thisProduct verifyReceiptOnComplete:^
-             {
-                 [self rememberPurchaseOfProduct:productIdentifier];
-                 if (self.onTransactionCompleted)
-                     self.onTransactionCompleted(productIdentifier);
-             }
+            [thisProduct verifyReceiptOnComplete:self.onTransactionCompleted
                                          onError:^(NSError* error)
              {
                  if(self.onTransactionCancelled)
-                 {
                      self.onTransactionCancelled(error);
-                 }
                  else
-                 {
                      NSLog(@"The receipt could not be verified");
-                 }
              }];            
         }
         else
@@ -567,7 +558,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 
 -(void) rememberPurchaseOfProduct:(NSString*) productIdentifier
 {
-    NSDictionary *allConsumables = [[self storeKitItems] objectForKey:@"Consumables"];
+    NSDictionary *allConsumables = [[self storeKitItems] objectForKey:kMKSKConfigConsumablesKey];
     if([[allConsumables allKeys] containsObject:productIdentifier])
     {
         NSDictionary *thisConsumableDict = [allConsumables objectForKey:productIdentifier];

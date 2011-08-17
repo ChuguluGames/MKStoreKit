@@ -33,22 +33,19 @@
 #import <Foundation/Foundation.h>
 #import "MKStoreKitConfigs.h"
 #import "MKStoreManager.h"
+#import "MKSKRequestAdapterProtocol.h"
 
-@interface MKSKProduct : NSObject
+@interface MKSKProduct : NSObject<MKSKRequestAdapterDelegate> {
 
-@property (nonatomic, copy) void (^onReceiptVerificationSucceeded)();
-@property (nonatomic, copy) void (^onReceiptVerificationFailed)(NSError*);
+}
 
 @property (nonatomic, retain) NSData *receipt;
-
 @property (nonatomic, retain) NSString *productId;
-@property (nonatomic, retain) NSURLConnection *theConnection;
-@property (nonatomic, retain) NSMutableData *dataFromConnection;
-
-- (void) verifyReceiptOnComplete:(void (^)(void)) completionBlock
-                         onError:(void (^)(NSError*)) errorBlock;
 
 -(id) initWithProductId:(NSString*) aProductId receiptData:(NSData*) aReceipt;
+
+- (void) verifyReceiptOnComplete:(void (^)(id)) completionBlock
+                         onError:(void (^)(NSError*)) errorBlock;
 
 +(void) verifyProductForReviewAccess:(NSString*) productId
                           onComplete:(void (^)(NSNumber*)) completionBlock

@@ -35,21 +35,10 @@
 
 #import <Foundation/Foundation.h>
 #import <StoreKit/StoreKit.h>
+#import "MKSKConstants.h"
 #import "MKStoreObserver.h"
 #import "MKStoreKitConfigs.h"
 #import "JSONKit.h"
-
-#define kReceiptStringKey @"MK_STOREKIT_RECEIPTS_STRING"
-
-#ifndef NDEBUG
-#define kReceiptValidationURL @"https://sandbox.itunes.apple.com/verifyReceipt"
-#else
-#define kReceiptValidationURL @"https://buy.itunes.apple.com/verifyReceipt"
-#endif
-
-#define kProductFetchedNotification @"MKStoreKitProductsFetched"
-#define kSubscriptionsPurchasedNotification @"MKStoreKitSubscriptionsPurchased"
-#define kSubscriptionsInvalidNotification @"MKStoreKitSubscriptionsInvalid"
 
 @interface MKStoreManager : NSObject<SKProductsRequestDelegate>
 

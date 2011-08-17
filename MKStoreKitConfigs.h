@@ -36,45 +36,54 @@
 // To avoid making mistakes map plist entries to macros on this page.
 // when you include MKStoreManager in your clss, these macros get defined there
 
-#ifndef kConsumableBaseFeatureId
-#define kConsumableBaseFeatureId    @"com.mycompany.myapp."
+#ifndef kMKSKConsumableBaseFeatureId
+#define kMKSKConsumableBaseFeatureId    @"com.mycompany.myapp."
 #endif
 
-#ifndef kFeatureAId
-#define kFeatureAId                 @"com.mugunthkumar.subinapptest.wk1"
+#ifndef kMKSKFeatureAId
+#define kMKSKFeatureAId                 @"com.mugunthkumar.subinapptest.wk1"
 #endif
 
-#ifndef kConsumableBaseFeatureId
-#define kConsumableFeatureBId       @"com.mycompany.myapp.005"
+#ifndef kMKSKConsumableFeatureBId
+#define kMKSKConsumableFeatureBId       @"com.mycompany.myapp.005"
 #endif
 
 #ifndef FishBasket
 #define FishBasket                  @"FishBasket"
 #endif
 
-#ifndef REVIEW_ALLOWED
-#define REVIEW_ALLOWED          0
+#ifndef MKSK_PRODUCT_REVIEW_ALLOWED
+#define MKSK_PRODUCT_REVIEW_ALLOWED          NO
 #endif
 
-#ifndef SERVER_PRODUCT_MODEL
-#define SERVER_PRODUCT_MODEL    1
+#ifndef MKSK_REMOTE_PRODUCT_MODEL
+#define MKSK_REMOTE_PRODUCT_MODEL           YES
 #endif
 
-#ifndef OWN_SERVER
-#define OWN_SERVER                      nil
+#ifndef MKSK_USE_REMOTE_PRODUCT_SERVER
+#define MKSK_USE_REMOTE_PRODUCT_SERVER      NO
 #endif
 
-#ifndef VERIFY_PRODUCT_FOR_REVIEW_PATH
-#define VERIFY_PRODUCT_FOR_REVIEW_PATH  @"featureCheck.php"
+#ifndef MKSK_REMOTE_PRODUCT_SERVER
+#define MKSK_REMOTE_PRODUCT_SERVER          nil
 #endif
 
-#ifndef VERIFY_RECEIPT_PATH
-#define VERIFY_RECEIPT_PATH             @"verifyProduct.php"
+#ifndef MKSK_PRODUCT_VERIFY_PRODUCT_FOR_REVIEW_PATH
+#define MKSK_PRODUCT_VERIFY_PRODUCT_FOR_REVIEW_PATH  @"featureCheck.php"
 #endif
 
-#ifndef RESPONSE_SUCCESS
-#define RESPONSE_SUCCESS                @"YES"
+#ifndef MKSK_PRODUCT_VERIFY_RECEIPT_PATH
+#define MKSK_PRODUCT_VERIFY_RECEIPT_PATH             @"verifyProduct.php"
 #endif
 
 #warning Shared Secret Missing Ignore this warning if you don't use auto-renewable subscriptions
-#define kSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
+#define kMKSKSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
+
+
+#ifdef MKSK_REQUEST_ADAPTER_RESTKIT
+    #undef MKSK_REMOTE_PRODUCT_SERVER
+    #define MKSK_REMOTE_PRODUCT_SERVER  nil
+    #define MKSK_REQUEST_ADAPTER        MKSKRequestAdapterRestKit
+#else
+    #define MKSK_REQUEST_ADAPTER        MKSKRequestAdapterNSURLConnection
+#endif

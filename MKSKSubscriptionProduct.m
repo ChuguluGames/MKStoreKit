@@ -29,18 +29,16 @@
 //	3) or a tweet mentioning @mugunthkumar
 //	4) A paypal donation to mugunth.kumar@gmail.com
 
-
+#import "MKSKConstants.h"
 #import "MKSKSubscriptionProduct.h"
+#import <StoreKit/StoreKit.h>
+#import "MKStoreManager.h"
 #import "NSData+Base64.h"
-#import "MKSKRequestHelper.h"
+#import "MKSKRequestAdapter.h"
 
 @implementation MKSKSubscriptionProduct
-@synthesize onSubscriptionVerificationFailed;
-@synthesize onSubscriptionVerificationCompleted;
 @synthesize receipt;
 @synthesize subscriptionDays;
-@synthesize theConnection;
-@synthesize dataFromConnection;
 @synthesize productId;
 @synthesize verifiedReceiptDictionary;
 
@@ -51,36 +49,35 @@
         self.productId = aProductId;
         self.subscriptionDays = days;
     }
-    
     return self;
 }
 
 - (void) dealloc {
     self.productId = nil;
-    self.theConnection = nil;
     self.receipt = nil;
     self.verifiedReceiptDictionary = nil;
-    self.dataFromConnection = nil;
-    self.onSubscriptionVerificationFailed = nil;
-    self.onSubscriptionVerificationCompleted = nil;
     [super dealloc];
 }
 
 - (void) verifyReceiptOnComplete:(void (^)(NSNumber*)) completionBlock
                          onError:(void (^)(NSError*)) errorBlock
 {        
-    self.onSubscriptionVerificationCompleted = completionBlock;
-    self.onSubscriptionVerificationFailed = errorBlock;
-    
-    NSURL *url = [NSURL URLWithString:kReceiptValidationURL];
+    NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kMKSKSharedSecret];
 
-    NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kSharedSecret];
-    NSURLRequest* theRequest = [MKSKRequestHelper buildRequestWithString:receiptString forURL:url];
-    self.theConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];    
-    [self.theConnection start];    
+    [MKSK_REQUEST_ADAPTER requestWithBaseURL:kMKSKReceiptValidationURL
+                                                     path:nil
+                                                     body:receiptString
+                                                 delegate:nil
+                                                onSuccess:completionBlock
+                                                onFailure:errorBlock
+                                             checkingResponse:^(id response){
+                                                 if (![response isKindOfClass:[NSDictionary class]])
+                                                     return NO;
+                                                 return ([(NSDictionary*)response objectForKey:@"receipt"] != nil);
+                                             }];
 }
 
--(BOOL) isSubscriptionActive
+- (BOOL) isSubscriptionActive
 {
     NSString *purchasedDateString = [[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"purchase_date"];
     NSDateFormatter *df = [[NSDateFormatter alloc] init];
@@ -99,42 +96,12 @@
     return (self.subscriptionDays > numberOfDays);
 }
 
+#pragma mark - Delegates
+#pragma mark <MKSKRequestAdapterDelegate> methods
 
-#pragma mark -
-#pragma mark NSURLConnection delegate
-
-- (void)connection:(NSURLConnection *)connection
-didReceiveResponse:(NSURLResponse *)response
-{	
-    self.dataFromConnection = [NSMutableData data];
-}
-
-- (void)connection:(NSURLConnection *)connection
-    didReceiveData:(NSData *)data
-{
-	[self.dataFromConnection appendData:data];
-}
-
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection
-{
-    self.verifiedReceiptDictionary = [[[self.dataFromConnection copy] autorelease] objectFromJSONData];                                              
-    if(self.onSubscriptionVerificationCompleted)
-    {
-        self.onSubscriptionVerificationCompleted([NSNumber numberWithBool:[self isSubscriptionActive]]);
-        self.dataFromConnection = nil;
-    }
-    
-    self.onSubscriptionVerificationCompleted = nil;
-}
-
-- (void)connection:(NSURLConnection *)connection
-  didFailWithError:(NSError *)error
-{
-    self.dataFromConnection = nil;
-    if(self.onSubscriptionVerificationFailed)
-        self.onSubscriptionVerificationFailed(error);
-    
-    self.onSubscriptionVerificationFailed = nil;
+- (id) request:(id<MKSKRequestAdapterProtocol>)request didFinishWithData:(id)responseData {
+    self.verifiedReceiptDictionary = responseData;
+    return [NSNumber numberWithBool:[self isSubscriptionActive]];
 }
 
 @end

@@ -29,26 +29,19 @@
 //	3) or a tweet mentioning @mugunthkumar
 //	4) A paypal donation to mugunth.kumar@gmail.com
 
-
 #import <Foundation/Foundation.h>
-#import <StoreKit/StoreKit.h>
-#import "MKStoreManager.h"
+#import "MKSKRequestAdapterProtocol.h"
 
-@interface MKSKSubscriptionProduct : NSObject
+@interface MKSKSubscriptionProduct : NSObject<MKSKRequestAdapterDelegate>
 
-@property (nonatomic, copy) void (^onSubscriptionVerificationFailed)();
-@property (nonatomic, copy) void (^onSubscriptionVerificationCompleted)(NSNumber* isActive);
 @property (nonatomic, retain) NSData *receipt;
 @property (nonatomic, retain) NSDictionary *verifiedReceiptDictionary;
-@property (nonatomic, assign) int subscriptionDays; 
+@property (nonatomic, assign) int subscriptionDays;
 @property (nonatomic, retain) NSString *productId;
-@property (nonatomic, retain) NSURLConnection *theConnection;
-@property (nonatomic, retain) NSMutableData *dataFromConnection;
-
 
 - (void) verifyReceiptOnComplete:(void (^)(NSNumber*)) completionBlock
                          onError:(void (^)(NSError*)) errorBlock;
 
--(BOOL) isSubscriptionActive;
--(id) initWithProductId:(NSString*) productId subscriptionDays:(int) days;
+- (BOOL) isSubscriptionActive;
+- (id) initWithProductId:(NSString*) productId subscriptionDays:(int) days;
 @end

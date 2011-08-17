@@ -3,7 +3,7 @@
 	$user = "mugunth1_udid";
 	$password = "wrong password";
 	
-	header('Content-Type: text/plain'); 
+	header('Content-Type: application/json'); 
 	$prod = $_POST['productid'];
 	$udid = $_POST['udid'];
 	
@@ -18,14 +18,14 @@
 
     // Execute sample query (insert it into mksync all data in customer table)
 
-    $res = mysql_query("SELECT * FROM mugunth1_udid.requests where udid='$udid' AND productid='$prod' AND status = 1",$hd) or die ("Unable to select :-(");
+    $res = mysql_query("SELECT * FROM mugunth1_udid.requests where udid='$udid' AND productid='$prod' AND status = 1",$hd) or die ("Unable to fetch :-(");
 
 	
 	$num = mysql_num_rows($res);
 	if($num == 0)
-		$returnString = "NO";
+		$returnString = "epic fail";
 	else
-		$returnString = "YES";
+		$returnString = '{"product_id":"'.$prod.'"}';
  	mysql_close($hd);
 
 	echo $returnString;
