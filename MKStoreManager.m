@@ -40,6 +40,7 @@
 
 @interface MKStoreManager () //private methods and properties
 
+@property (nonatomic, copy) void (^onTransactionError)(NSError *error);
 @property (nonatomic, copy) void (^onTransactionCancelled)(NSError *error);
 @property (nonatomic, copy) void (^onTransactionCompleted)(NSString *productId);
 
@@ -66,6 +67,7 @@
 
 @synthesize isProductsAvailable;
 
+@synthesize onTransactionError;
 @synthesize onTransactionCancelled;
 @synthesize onTransactionCompleted;
 @synthesize onRestoreFailed;
@@ -86,7 +88,7 @@ static MKStoreManager* _sharedStoreManager;
     [onTransactionCancelled release], onTransactionCancelled = nil;
     [onTransactionCompleted release], onTransactionCompleted = nil;
     [onRestoreFailed release], onRestoreFailed = nil;
-    [onRestoreCompleted release], onRestoreCompleted = nil;    
+    [onRestoreCompleted release], onRestoreCompleted = nil;
     [super dealloc];
 }
 
@@ -198,7 +200,7 @@ static MKStoreManager* _sharedStoreManager;
 
 - (unsigned)retainCount
 {
-    return UINT_MAX;  //denotes an object that cannot be released
+    return UINT_MAX;//denotes an object that cannot be released
 }
 
 - (void)release
@@ -272,12 +274,12 @@ static MKStoreManager* _sharedStoreManager;
     int itemCount = productsArray.count;
     NSError *error;
     
-    //loop through all the saved keychain data and remove it    
+    //loop through all the saved keychain data and remove it
     for (int i = 0; i < itemCount; i++ ) {
         [SFHFKeychainUtils deleteItemForUsername:[productsArray objectAtIndex:i] andServiceName:kMKSKServiceName error:&error];
     }
     if (!error) {
-        return YES; 
+        return YES;
     }
     else {
         return NO;
@@ -381,20 +383,21 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 		[numberFormatter release];
         
         NSString *priceString = [NSString stringWithFormat:@"%@", formattedString];
-        [priceDict setObject:priceString forKey:product.productIdentifier]; 
-        
+        [priceDict setObject:priceString forKey:product.productIdentifier];
     }
     return priceDict;
 }
 
 - (void) buyFeature:(NSString*) featureId
-         onComplete:(void (^)(NSString*)) completionBlock         
-        onCancelled:(void (^)(NSError*)) cancelBlock
+         onComplete:(void (^)(NSString*))completionBlock
+           onCancel:(void (^)(NSError*)) cancelBlock
+            onError:(void (^)(NSError *))errorBlock
 {
     self.onTransactionCompleted = completionBlock;
     self.onTransactionCancelled = cancelBlock;
+    self.onTransactionError     = errorBlock;
     
-    [MKSKProduct verifyProductForReviewAccess:featureId                                                              
+    [MKSKProduct verifyProductForReviewAccess:featureId
                                    onComplete:^(NSNumber * isAllowed)
      {
          if([isAllowed boolValue])
@@ -408,14 +411,14 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
              [alert release];
              
              if(self.onTransactionCompleted)
-                 self.onTransactionCompleted(featureId);                                         
+                 self.onTransactionCompleted(featureId);
          }
          else
          {
              [self addToQueue:featureId];
          }
          
-     }                                                                   
+     }
                                       onError:^(NSError* error)
      {
          NSLog(@"Review request cannot be checked now: %@", [error description]);
@@ -478,7 +481,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
     self.subscriptionProducts = [NSMutableDictionary dictionary];
     for(NSString *productId in [subscriptions allKeys])
     {
-        MKSKSubscriptionProduct *product = [[[MKSKSubscriptionProduct alloc] initWithProductId:productId subscriptionDays:[[subscriptions objectForKey:productId] intValue]] autorelease];        
+        MKSKSubscriptionProduct *product = [[[MKSKSubscriptionProduct alloc] initWithProductId:productId subscriptionDays:[[subscriptions objectForKey:productId] intValue]] autorelease];
         product.receipt = [MKStoreManager dataForKey:productId]; // cached receipt
         
         if(product.receipt)
@@ -494,12 +497,12 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
                  }
                  else
                  {
-                     NSLog(@"Subscription: %@ is active", product.productId);                     
+                     NSLog(@"Subscription: %@ is active", product.productId);
                  }
              }
                                      onError:^(NSError* error)
              {
-                 NSLog(@"Unable to check for subscription validity right now");                                      
+                 NSLog(@"Unable to check for subscription validity right now");
              }]; 
         }
         
@@ -509,19 +512,19 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 
 #pragma mark In-App purchases callbacks
 // In most cases you don't have to touch these methods
--(void) provideContent: (NSString*) productIdentifier 
+-(void) provideContent:(NSString*) productIdentifier 
             forReceipt:(NSData*) receiptData
 {
     MKSKSubscriptionProduct *subscriptionProduct = [self.subscriptionProducts objectForKey:productIdentifier];
     if(subscriptionProduct)
-    {                
+    {
         subscriptionProduct.receipt = receiptData;
         [subscriptionProduct verifyReceiptOnComplete:^(NSNumber* isActive)
          {
              [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKSubscriptionsPurchasedNotification 
                                                                  object:productIdentifier];
 
-             [MKStoreManager setObject:receiptData forKey:productIdentifier];             
+             [MKStoreManager setObject:receiptData forKey:productIdentifier];
          }
                                              onError:^(NSError* error)
          {
@@ -536,22 +539,22 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
             // this is a blocking call to post receipt data to your server
             // it should normally take a couple of seconds on a good 3G connection
             MKSKProduct *thisProduct = [[[MKSKProduct alloc] initWithProductId:productIdentifier receiptData:receiptData] autorelease];
-            
+
             [thisProduct verifyReceiptOnComplete:self.onTransactionCompleted
                                          onError:^(NSError* error)
              {
-                 if(self.onTransactionCancelled)
-                     self.onTransactionCancelled(error);
+                 if(self.onTransactionError)
+                     self.onTransactionError(error);
                  else
                      NSLog(@"The receipt could not be verified");
-             }];            
+             }];
         }
         else
         {
             [self rememberPurchaseOfProduct:productIdentifier];
             if (self.onTransactionCompleted)
                 self.onTransactionCompleted(productIdentifier);
-        }                
+        }
     }
 }
 
@@ -568,7 +571,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
         int oldCount = [[MKStoreManager numberForKey:productPurchased] intValue];
         int newCount = oldCount + quantityPurchased;	
         
-        [MKStoreManager setObject:[NSNumber numberWithInt:newCount] forKey:productIdentifier];        
+        [MKStoreManager setObject:[NSNumber numberWithInt:newCount] forKey:productIdentifier];
     }
     else
     {
@@ -576,36 +579,24 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
     }
 }
 
-- (void) transactionCanceled: (SKPaymentTransaction *)transaction
+- (void) transactionCancelled: (SKPaymentTransaction *)transaction
 {
-    
 #ifndef NDEBUG
 	NSLog(@"User cancelled transaction: %@", [transaction description]);
     NSLog(@"error: %@", transaction.error);
 #endif
-    
     if(self.onTransactionCancelled)
-        self.onTransactionCancelled(nil);
+        self.onTransactionCancelled(transaction.error);
 }
 
-- (void) failedTransaction: (SKPaymentTransaction *)transaction
+- (void) transactionFailed:(SKPaymentTransaction *)transaction
 {
-    
 #ifndef NDEBUG
     NSLog(@"Failed transaction: %@", [transaction description]);
-    NSLog(@"error: %@", transaction.error);    
+    NSLog(@"error: %@", transaction.error);
 #endif
-	
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:[transaction.error localizedFailureReason] 
-													message:[transaction.error localizedRecoverySuggestion]
-												   delegate:self 
-										  cancelButtonTitle:NSLocalizedString(@"Dismiss", @"")
-										  otherButtonTitles: nil];
-	[alert show];
-	[alert release];
-    
-    if(self.onTransactionCancelled)
-        self.onTransactionCancelled(nil);
+    if (self.onTransactionError)
+        self.onTransactionError(transaction.error);
 }
 
 @end
