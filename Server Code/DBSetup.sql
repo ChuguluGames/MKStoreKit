@@ -20,9 +20,9 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 --
 
 CREATE TABLE IF NOT EXISTS `products` (
-  `productid` varchar(255) NOT NULL,
-  `productName` varchar(30) NOT NULL,
-  `productDesc` varchar(255) NOT NULL
+  `product_id` varchar(255) NOT NULL,
+  `name` varchar(30) NOT NULL,
+  `description` varchar(255) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -32,10 +32,10 @@ CREATE TABLE IF NOT EXISTS `products` (
 --
 
 CREATE TABLE IF NOT EXISTS `requests` (
-  `udid` varchar(40) NOT NULL,
-  `productid` varchar(100) NOT NULL,
+  `unique_id` varchar(40) NOT NULL,
+  `product_id` varchar(100) NOT NULL,
   `email` varchar(100) default NULL,
   `message` varchar(1000) default NULL,
   `status` tinyint(1) NOT NULL default '0',
-  `lastUpdated` timestamp NOT NULL default CURRENT_TIMESTAMP
+  `last_updated` timestamp NOT NULL default CURRENT_TIMESTAMP
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;

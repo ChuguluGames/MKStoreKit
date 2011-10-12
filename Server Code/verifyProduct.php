@@ -20,12 +20,12 @@
 	
 	if($response->{'status'} == 0)
 	{
-		echo ('YES');
+		echo ('{"product_id":null}');
 	}
 	else
 	{
-		echo ('NO');		
-	}	
+		echo ('epic fail');
+	}
 
 	function do_post_request($url, $data, $optional_headers = null)
 	{
