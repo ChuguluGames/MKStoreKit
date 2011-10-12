@@ -71,8 +71,23 @@
 }
 
 + (NSDictionary*) productForReviewAccessPostData:(NSString*)productId {
-    NSString *uniqueID = [[UIDevice currentDevice] uniqueIdentifier];
-    return [NSDictionary dictionaryWithObjectsAndKeys:productId, @"productid", uniqueID, @"udid", nil];
+    UIDevice *dev       = [UIDevice currentDevice];
+    NSString *uniqueID  = nil;
+    if (![dev respondsToSelector:@selector(uniqueIdentifier)] || (uniqueID = [dev.uniqueIdentifier retain]) == nil) {
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        if ((uniqueID = [[defaults stringForKey:@"uniqueID"] retain]) == nil) {
+            CFUUIDRef cfUUID            = CFUUIDCreate(NULL);
+            CFStringRef cfUUIDString    = CFUUIDCreateString(NULL, cfUUID);
+            uniqueID                    = [(NSString *)cfUUIDString retain];
+            CFRelease(cfUUID);
+            CFRelease(cfUUIDString);
+            [defaults setObject:uniqueID forKey:@"uniqueID"];
+            [defaults synchronize];
+        }
+    }
+    NSDictionary* postData = [NSDictionary dictionaryWithObjectsAndKeys:productId, @"productID", uniqueID, @"uniqueID", nil];
+    [uniqueID release];
+    return postData;
 }
 
 + (BOOL) checkVerificationResponse:(id)response forProductId:(NSString*)productId {
@@ -97,14 +112,14 @@
         else
             postData = [[self class] productForReviewAccessPostData:productId];
         [MKSK_REQUEST_ADAPTER requestWithBaseURL:MKSK_REMOTE_PRODUCT_SERVER
-                                                         path:MKSK_PRODUCT_VERIFY_PRODUCT_FOR_REVIEW_PATH
-                                                         body:postData
-                                                     delegate:nil
-                                                    onSuccess:completionBlock
-                                                    onFailure:errorBlock
-                                                 checkingResponse:^(id response){
-                                                     return [[self class] checkVerificationResponse:response forProductId:productId];
-                                                 }];
+                                            path:MKSK_PRODUCT_VERIFY_PRODUCT_FOR_REVIEW_PATH
+                                            body:postData
+                                        delegate:nil
+                                       onSuccess:completionBlock
+                                       onFailure:errorBlock
+                                checkingResponse:^(id response) {
+                                     return [[self class] checkVerificationResponse:response forProductId:productId];
+                                }];
     }
     else
         completionBlock([NSNumber numberWithBool:NO]);
@@ -120,14 +135,14 @@
         postData = [[self class] receiptPostData:self.receipt];
 
     [MKSK_REQUEST_ADAPTER requestWithBaseURL:MKSK_REMOTE_PRODUCT_SERVER
-                                                     path:MKSK_PRODUCT_VERIFY_RECEIPT_PATH
-                                                     body:postData
-                                                 delegate:nil
-                                                onSuccess:completionBlock
-                                                onFailure:errorBlock
-                                     checkingResponse:^(id response){
-                                         return [[self class] checkVerificationResponse:response forProductId:self.productId];
-                                     }];	
+                                        path:MKSK_PRODUCT_VERIFY_RECEIPT_PATH
+                                        body:postData
+                                    delegate:nil
+                                   onSuccess:completionBlock
+                                   onFailure:errorBlock
+                            checkingResponse:^(id response) {
+                                return [[self class] checkVerificationResponse:response forProductId:self.productId];
+                            }];
 }
 
 @end
