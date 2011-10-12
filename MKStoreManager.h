@@ -39,15 +39,29 @@
 #import "MKStoreObserver.h"
 #import "MKStoreKitConfigs.h"
 #import "JSONKit.h"
+#import "MKStoreManagerDataSource.h"
 
-@interface MKStoreManager : NSObject<SKProductsRequestDelegate>
+
+@interface MKStoreManager : NSObject<SKProductsRequestDelegate> {
+    NSMutableArray*         _purchasableObjects;
+    NSMutableDictionary*    _subscriptionProducts;
+    BOOL                    _productsAvailable;
+}
 
 @property (nonatomic, copy) void (^customRequestProcessingBlock)(NSMutableURLRequest*);
 @property (nonatomic, copy) NSDictionary* (^customReceiptPostData)(NSData* receipt);
 @property (nonatomic, copy) NSDictionary* (^customProductForReviewAccessPostData)(NSString* productId);
 
+@property (nonatomic, readonly) NSMutableArray      *purchasableObjects;
+@property (nonatomic, readonly) NSMutableDictionary *subscriptionProducts;
+
+@property (nonatomic, assign) id<MKStoreManagerDataSource> dataSource;
+@property (nonatomic, readonly, getter=areProductsAvailable) BOOL productsAvailable;
+
 // These are the methods you will be using in your app
 + (MKStoreManager*)sharedManager;
+- (void) launch;
+- (id) initWithDataSource:(id<MKStoreManagerDataSource>)someDataSource;
 
 // this is a static method, since it doesn't require the store manager to be initialized prior to calling
 + (BOOL) isFeaturePurchased:(NSString*) featureId; 

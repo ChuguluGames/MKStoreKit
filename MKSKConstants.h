@@ -26,7 +26,3 @@ static NSString* const kMKSKSubscriptionsInvalidNotification   = @"MKStoreKitSub
 static NSString* const kMKSKServerResponseProductIdKey         = @"product_id";
 
 static NSString* const kMKSKServiceName                        = @"MKStoreKit";
-
-static NSString* const kMKSKConfigConsumablesKey               = @"Consumables";
-static NSString* const kMKSKConfigNonConsumablesKey            = @"Non-Consumables";
-static NSString* const kMKSKConfigSubscriptionsKey             = @"Subscriptions";

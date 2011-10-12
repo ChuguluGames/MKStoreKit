@@ -79,17 +79,19 @@
 
 - (BOOL) isSubscriptionActive
 {
-    NSString *purchasedDateString = [[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"purchase_date"];
+    NSString *purchaseDateString = [[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"purchase_date"];
+    if (!purchaseDateString)
+        return NO;
     NSDateFormatter *df = [[NSDateFormatter alloc] init];
 
     //2011-07-03 05:31:55 Etc/GMT
-    purchasedDateString = [purchasedDateString stringByReplacingOccurrencesOfString:@" Etc/GMT" withString:@""];    
+    purchaseDateString = [purchaseDateString stringByReplacingOccurrencesOfString:@" Etc/GMT" withString:@""];    
     NSLocale *POSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
     [df setLocale:POSIXLocale];
     [df setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];    
     [df setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
     
-    NSDate *purchasedDate = [df dateFromString: purchasedDateString];
+    NSDate *purchasedDate = [df dateFromString: purchaseDateString];
     [df release];
     
     int numberOfDays = [purchasedDate timeIntervalSinceNow] / (-86400.0);    

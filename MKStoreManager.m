@@ -37,6 +37,7 @@
 #import "SFHFKeychainUtils.h"
 #import "MKSKSubscriptionProduct.h"
 #import "MKSKProduct.h"
+#import "MKStoreManagerDataSourcePlist.h"
 
 @interface MKStoreManager () //private methods and properties
 
@@ -47,11 +48,7 @@
 @property (nonatomic, copy) void (^onRestoreFailed)(NSError* error);
 @property (nonatomic, copy) void (^onRestoreCompleted)();
 
-@property (nonatomic, retain) NSMutableArray *purchasableObjects;
-@property (nonatomic, retain) NSMutableDictionary *subscriptionProducts;
-
 @property (nonatomic, retain) MKStoreObserver *storeObserver;
-@property (nonatomic, assign, getter=isProductsAvailable) BOOL isProductsAvailable;
 
 - (void) requestProductData;
 - (void) startVerifyingSubscriptionReceipts;
@@ -65,7 +62,9 @@
 @synthesize storeObserver = _storeObserver;
 @synthesize subscriptionProducts;
 
-@synthesize isProductsAvailable;
+@synthesize dataSource;
+
+@synthesize productsAvailable = _productsAvailable;
 
 @synthesize onTransactionError;
 @synthesize onTransactionCancelled;
@@ -79,10 +78,37 @@
 
 static MKStoreManager* _sharedStoreManager;
 
+- (id) initWithDataSource:(id<MKStoreManagerDataSource>)someDataSource {
+    if ((self = [super init])) {
+        self.dataSource             = someDataSource;//[MKStoreManagerDataSourcePlist new];
+        _purchasableObjects         = [NSMutableArray new];
+        _subscriptionProducts       = [NSMutableDictionary new];
+        self.customReceiptPostData  = nil;
+        self.customProductForReviewAccessPostData = nil;
+        self.customRequestProcessingBlock = nil;
+    }
+    return self;
+}
+
+- (id) init {
+    return [self initWithDataSource:nil];
+}
+
+- (void) launch {
+    NSAssert(self.dataSource != nil, @"MKStoreKit : data source should not be nil", nil);
+    self.storeObserver = [[MKStoreObserver alloc] init];
+    [[SKPaymentQueue defaultQueue] addTransactionObserver:self.storeObserver];
+    [self.storeObserver release];
+    [self requestProductData];
+    [self startVerifyingSubscriptionReceipts];
+}
+
 - (void)dealloc {
+    self.dataSource = nil;
     self.customProductForReviewAccessPostData = nil;
     self.customReceiptPostData = nil;
     self.customRequestProcessingBlock = nil;
+    [_subscriptionProducts release], _subscriptionProducts = nil;
     [_purchasableObjects release], _purchasableObjects = nil;
     [_storeObserver release], _storeObserver = nil;
     [onTransactionCancelled release], onTransactionCancelled = nil;
@@ -120,7 +146,7 @@ static MKStoreManager* _sharedStoreManager;
         NSLog(@"%@", [error localizedDescription]);
 }
 
-+(id) objectForKey:(NSString*) key
++ (id) objectForKey:(NSString*)key
 {
     NSError *error = nil;
     NSObject *object = [SFHFKeychainUtils getPasswordForUsername:key 
@@ -132,9 +158,9 @@ static MKStoreManager* _sharedStoreManager;
     return object;
 }
 
-+(NSNumber*) numberForKey:(NSString*) key
++ (NSNumber*) numberForKey:(NSString*) key
 {
-    return [NSNumber numberWithInt:[[MKStoreManager objectForKey:key] intValue]];
+    return [NSNumber numberWithInteger:[[MKStoreManager objectForKey:key] integerValue]];
 }
 
 +(NSData*) dataForKey:(NSString*) key
@@ -154,16 +180,6 @@ static MKStoreManager* _sharedStoreManager;
 			NSLog(@"You are running in Simulator MKStoreKit runs only on devices");
 #else
             _sharedStoreManager = [[self alloc] init];
-			_sharedStoreManager.purchasableObjects = [[NSMutableArray alloc] init];
-            [_sharedStoreManager.purchasableObjects release];
-            _sharedStoreManager.customReceiptPostData = nil;
-            _sharedStoreManager.customProductForReviewAccessPostData = nil;
-            _sharedStoreManager.customRequestProcessingBlock = nil;
-			[_sharedStoreManager requestProductData];
-			_sharedStoreManager.storeObserver = [[MKStoreObserver alloc] init];
-            [_sharedStoreManager.storeObserver release];
-			[[SKPaymentQueue defaultQueue] addTransactionObserver:_sharedStoreManager.storeObserver];
-            [_sharedStoreManager startVerifyingSubscriptionReceipts];
 #endif
         }
     }
@@ -216,13 +232,6 @@ static MKStoreManager* _sharedStoreManager;
 
 #pragma mark Internal MKStoreKit functions
 
--(NSDictionary*) storeKitItems
-{
-    return [NSDictionary dictionaryWithContentsOfFile:
-            [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:
-             @"MKStoreKitConfigs.plist"]];
-}
-
 - (void) restorePreviousTransactionsOnComplete:(void (^)(void)) completionBlock
                                        onError:(void (^)(NSError*)) errorBlock
 {
@@ -248,74 +257,64 @@ static MKStoreManager* _sharedStoreManager;
 
 -(void) requestProductData
 {
-    NSMutableArray *productsArray = [NSMutableArray array];
-    NSArray *consumables = [[[self storeKitItems] objectForKey:kMKSKConfigConsumablesKey] allKeys];
-    NSArray *nonConsumables = [[self storeKitItems] objectForKey:kMKSKConfigNonConsumablesKey];
-    NSArray *subscriptions = [[[self storeKitItems] objectForKey:kMKSKConfigSubscriptionsKey] allKeys];
-    
-    [productsArray addObjectsFromArray:consumables];
-    [productsArray addObjectsFromArray:nonConsumables];
-    [productsArray addObjectsFromArray:subscriptions];
-    
-	SKProductsRequest *request= [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithArray:productsArray]];
+    if (!self.dataSource)
+        return;
+    NSMutableSet* productsSet = [[NSMutableSet alloc] init];
+    [productsSet addObjectsFromArray:[[self.dataSource consumableProducts] allKeys]];
+    [productsSet addObjectsFromArray:[self.dataSource nonConsumableProducts]];
+    [productsSet addObjectsFromArray:[[self.dataSource subscriptionProducts] allKeys]];
+
+	SKProductsRequest *request= [[SKProductsRequest alloc] initWithProductIdentifiers:productsSet];
 	request.delegate = self;
 	[request start];
+    [productsSet autorelease];
 }
 - (BOOL) removeAllKeychainData {
-    NSMutableArray *productsArray = [NSMutableArray array];
-    NSArray *consumables = [[[self storeKitItems] objectForKey:kMKSKConfigConsumablesKey] allKeys];
-    NSArray *nonConsumables = [[self storeKitItems] objectForKey:kMKSKConfigNonConsumablesKey];
-    NSArray *subscriptions = [[[self storeKitItems] objectForKey:kMKSKConfigSubscriptionsKey] allKeys];
-    
-    [productsArray addObjectsFromArray:consumables];
-    [productsArray addObjectsFromArray:nonConsumables];
-    [productsArray addObjectsFromArray:subscriptions];
-    
-    int itemCount = productsArray.count;
-    NSError *error;
-    
-    //loop through all the saved keychain data and remove it
-    for (int i = 0; i < itemCount; i++ ) {
-        [SFHFKeychainUtils deleteItemForUsername:[productsArray objectAtIndex:i] andServiceName:kMKSKServiceName error:&error];
-    }
-    if (!error) {
-        return YES;
-    }
-    else {
+    if (!self.dataSource)
         return NO;
-    }
+
+    BOOL isSuccess = YES;
+
+    //loop through all the saved keychain data and remove it
+    for (NSString* productId in [[self.dataSource consumableProducts] allKeys])
+        if (![SFHFKeychainUtils deleteItemForUsername:productId andServiceName:kMKSKServiceName error:nil])
+            isSuccess = NO;
+    for (NSString* productId in [self.dataSource nonConsumableProducts])
+        if (![SFHFKeychainUtils deleteItemForUsername:productId andServiceName:kMKSKServiceName error:nil])
+            isSuccess = NO;
+    for (NSString* productId in [[self.dataSource subscriptionProducts] allKeys])
+        if (![SFHFKeychainUtils deleteItemForUsername:productId andServiceName:kMKSKServiceName error:nil])
+            isSuccess = NO;
+    return isSuccess;
 }
 
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response
 {
 	[self.purchasableObjects addObjectsFromArray:response.products];
 	
-#ifndef NDEBUG	
-	for(int i=0;i<[self.purchasableObjects count];i++)
-	{		
-		SKProduct *product = [self.purchasableObjects objectAtIndex:i];
-		NSLog(@"Feature: %@, Cost: %f, ID: %@",[product localizedTitle],
+#ifndef NDEBUG
+    for (SKProduct* product in self.purchasableObjects) {
+        NSLog(@"Feature: %@, Cost: %f, ID: %@",[product localizedTitle],
 			  [[product price] doubleValue], [product productIdentifier]);
-	}
-	
-	for(NSString *invalidProduct in response.invalidProductIdentifiers)
+    }
+	for (NSString *invalidProduct in response.invalidProductIdentifiers)
 		NSLog(@"Problem in iTunes connect configuration for product: %@", invalidProduct);
 #endif
-	
+
 	[request autorelease];
-	
-	isProductsAvailable = YES;    
+
+	_productsAvailable = YES;    
     [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKProductFetchedNotification 
-                                                        object:[NSNumber numberWithBool:isProductsAvailable]];
+                                                        object:[NSNumber numberWithBool:_productsAvailable]];
 }
 
 - (void)request:(SKRequest *)request didFailWithError:(NSError *)error
 {
 	[request autorelease];
-	
-	isProductsAvailable = NO;	
+
+	_productsAvailable = NO;	
     [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKProductFetchedNotification 
-                                                        object:[NSNumber numberWithBool:isProductsAvailable]];
+                                                        object:[NSNumber numberWithBool:_productsAvailable]];
 }
 
 // call this function to check if the user has already purchased your feature
@@ -326,7 +325,7 @@ static MKStoreManager* _sharedStoreManager;
 
 - (BOOL) isSubscriptionActive:(NSString*) featureId
 {    
-    MKSKSubscriptionProduct *subscriptionProduct = [self.subscriptionProducts objectForKey:featureId];
+    MKSKSubscriptionProduct *subscriptionProduct = [_subscriptionProducts objectForKey:featureId];
     return [subscriptionProduct isSubscriptionActive];
 }
 
@@ -336,28 +335,25 @@ static MKStoreManager* _sharedStoreManager;
 - (NSMutableArray*) purchasableObjectsDescription
 {
 	NSMutableArray *productDescriptions = [[NSMutableArray alloc] initWithCapacity:[self.purchasableObjects count]];
-	for(int i=0;i<[self.purchasableObjects count];i++)
-	{
-		SKProduct *product = [self.purchasableObjects objectAtIndex:i];
-		
-		NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-		[numberFormatter setFormatterBehavior:NSNumberFormatterBehavior10_4];
-		[numberFormatter setNumberStyle:NSNumberFormatterCurrencyStyle];
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    [numberFormatter setFormatterBehavior:NSNumberFormatterBehavior10_4];
+    [numberFormatter setNumberStyle:NSNumberFormatterCurrencyStyle];
+
+    for (SKProduct* product in self.purchasableObjects)
+    {
 		[numberFormatter setLocale:product.priceLocale];
 		NSString *formattedString = [numberFormatter stringFromNumber:product.price];
-		[numberFormatter release];
-		
+
 		// you might probably need to change this line to suit your UI needs
 		NSString *description = [NSString stringWithFormat:@"%@ (%@)",[product localizedTitle], formattedString];
 		
 #ifndef NDEBUG
-		NSLog(@"Product %d - %@", i, description);
+		NSLog(@"Product - %@", description);
 #endif
-		[productDescriptions addObject: description];
+		[productDescriptions addObject:description];
 	}
-	
-	[productDescriptions autorelease];
-	return productDescriptions;
+    [numberFormatter release];
+	return [productDescriptions autorelease];
 }
 
 /*Call this function to get a dictionary with all prices of all your product identifers 
@@ -369,23 +365,19 @@ NSDictionary *prices = [[MKStoreManager sharedManager] pricesDictionary];
 NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 
 */
-- (NSMutableDictionary *)pricesDictionary {
-    NSMutableDictionary *priceDict = [NSMutableDictionary dictionary];
-	for(int i=0;i<[self.purchasableObjects count];i++)
-	{
-		SKProduct *product = [self.purchasableObjects objectAtIndex:i];
-		
-		NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-		[numberFormatter setFormatterBehavior:NSNumberFormatterBehavior10_4];
-		[numberFormatter setNumberStyle:NSNumberFormatterCurrencyStyle];
+- (NSMutableDictionary *) pricesDictionary {
+    NSMutableDictionary *priceDict = [NSMutableDictionary new];
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+    [numberFormatter setFormatterBehavior:NSNumberFormatterBehavior10_4];
+    [numberFormatter setNumberStyle:NSNumberFormatterCurrencyStyle];    
+    for (SKProduct* product in self.purchasableObjects)
+    {		
 		[numberFormatter setLocale:product.priceLocale];
 		NSString *formattedString = [numberFormatter stringFromNumber:product.price];
-		[numberFormatter release];
-        
-        NSString *priceString = [NSString stringWithFormat:@"%@", formattedString];
-        [priceDict setObject:priceString forKey:product.productIdentifier];
+        [priceDict setObject:formattedString forKey:product.productIdentifier];
     }
-    return priceDict;
+    [numberFormatter release];
+    return [priceDict autorelease];
 }
 
 - (void) buyFeature:(NSString*) featureId
@@ -447,41 +439,32 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 
 - (BOOL) canConsumeProduct:(NSString*) productIdentifier
 {
-	int count = [[MKStoreManager numberForKey:productIdentifier] intValue];
-	
-	return (count > 0);
-	
+	return ([[MKStoreManager numberForKey:productIdentifier] integerValue] > 0);
 }
 
-- (BOOL) canConsumeProduct:(NSString*) productIdentifier quantity:(int) quantity
+- (BOOL) canConsumeProduct:(NSString*) productIdentifier quantity:(NSInteger) quantity
 {
-	int count = [[MKStoreManager numberForKey:productIdentifier] intValue];
-	return (count >= quantity);
+	return ([[MKStoreManager numberForKey:productIdentifier] integerValue] >= quantity);
 }
 
-- (BOOL) consumeProduct:(NSString*) productIdentifier quantity:(int) quantity
+- (BOOL) consumeProduct:(NSString*) productIdentifier quantity:(NSInteger)quantity
 {
-	int count = [[MKStoreManager numberForKey:productIdentifier] intValue];
+	NSInteger count = [[MKStoreManager numberForKey:productIdentifier] integerValue];
 	if(count < quantity)
-	{
 		return NO;
-	}
-	else 
-	{
-		count -= quantity;
-        [MKStoreManager setObject:[NSNumber numberWithInt:count] forKey:productIdentifier];
-		return YES;
-	}	
+    count -= quantity;
+    [MKStoreManager setObject:[NSNumber numberWithInteger:count] forKey:productIdentifier];
+    return YES;
 }
 
 - (void) startVerifyingSubscriptionReceipts
 {
-    NSDictionary *subscriptions = [[self storeKitItems] objectForKey:kMKSKConfigSubscriptionsKey];
-    
-    self.subscriptionProducts = [NSMutableDictionary dictionary];
-    for(NSString *productId in [subscriptions allKeys])
+    if (!self.dataSource)
+        return ;
+
+    for(NSString *productId in [[self.dataSource subscriptionProducts] allKeys])
     {
-        MKSKSubscriptionProduct *product = [[[MKSKSubscriptionProduct alloc] initWithProductId:productId subscriptionDays:[[subscriptions objectForKey:productId] intValue]] autorelease];
+        MKSKSubscriptionProduct *product = [[[MKSKSubscriptionProduct alloc] initWithProductId:productId subscriptionDays:[[[self.dataSource subscriptionProducts] objectForKey:productId] intValue]] autorelease];
         product.receipt = [MKStoreManager dataForKey:productId]; // cached receipt
         
         if(product.receipt)
@@ -506,7 +489,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
              }]; 
         }
         
-        [self.subscriptionProducts setObject:product forKey:productId];
+        [_subscriptionProducts setObject:product forKey:productId];
     }
 }
 
@@ -515,7 +498,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 -(void) provideContent:(NSString*) productIdentifier 
             forReceipt:(NSData*) receiptData
 {
-    MKSKSubscriptionProduct *subscriptionProduct = [self.subscriptionProducts objectForKey:productIdentifier];
+    MKSKSubscriptionProduct *subscriptionProduct = [_subscriptionProducts objectForKey:productIdentifier];
     if(subscriptionProduct)
     {
         subscriptionProduct.receipt = receiptData;
@@ -558,25 +541,24 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
     }
 }
 
-
--(void) rememberPurchaseOfProduct:(NSString*) productIdentifier
+- (void) rememberPurchaseOfProduct:(NSString*) productIdentifier
 {
-    NSDictionary *allConsumables = [[self storeKitItems] objectForKey:kMKSKConfigConsumablesKey];
-    if([[allConsumables allKeys] containsObject:productIdentifier])
+    if (!self.dataSource)
+        return;
+    NSDictionary *allConsumables = [self.dataSource consumableProducts];
+    if ([[allConsumables allKeys] containsObject:productIdentifier])
     {
-        NSDictionary *thisConsumableDict = [allConsumables objectForKey:productIdentifier];
-        int quantityPurchased = [[thisConsumableDict objectForKey:@"Count"] intValue];
-        NSString* productPurchased = [thisConsumableDict objectForKey:@"Name"];
-        
-        int oldCount = [[MKStoreManager numberForKey:productPurchased] intValue];
-        int newCount = oldCount + quantityPurchased;	
-        
-        [MKStoreManager setObject:[NSNumber numberWithInt:newCount] forKey:productIdentifier];
+        id thisConsumable                   = [allConsumables objectForKey:productIdentifier];
+        NSInteger quantityPurchased         = [self.dataSource quantityForConsumable:thisConsumable];
+        NSString* productPurchased          = [self.dataSource nameForConsumable:thisConsumable];
+
+        NSInteger oldCount                  = [[MKStoreManager numberForKey:productPurchased] integerValue];
+        NSInteger newCount                  = oldCount + quantityPurchased;	
+
+        [MKStoreManager setObject:[NSNumber numberWithInt:newCount] forKey:productPurchased];
     }
     else
-    {
         [MKStoreManager setObject:[NSNumber numberWithBool:YES] forKey:productIdentifier];	
-    }
 }
 
 - (void) transactionCancelled: (SKPaymentTransaction *)transaction
