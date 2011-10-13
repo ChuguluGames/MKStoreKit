@@ -15,6 +15,4 @@
     NSDictionary*   _storeKitItems;
 }
 
-@property (nonatomic, readonly) NSDictionary* storeKitItems;
-
 @end

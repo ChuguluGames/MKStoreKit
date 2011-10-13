@@ -80,10 +80,4 @@
 #define kMKSKSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
 
 
-#ifdef MKSK_REQUEST_ADAPTER_RESTKIT
-    #undef MKSK_REMOTE_PRODUCT_SERVER
-    #define MKSK_REMOTE_PRODUCT_SERVER  nil
-    #define MKSK_REQUEST_ADAPTER        MKSKRequestAdapterRestKit
-#else
-    #define MKSK_REQUEST_ADAPTER        MKSKRequestAdapterNSURLConnection
-#endif
+#define MKSK_REQUEST_ADAPTER_RESTKIT //change this if needed (see MKSKRequestAdapter.h), comment out for default adapter

@@ -67,7 +67,7 @@
     [MKSK_REQUEST_ADAPTER requestWithBaseURL:kMKSKReceiptValidationURL
                                                      path:nil
                                                      body:receiptString
-                                                 delegate:nil
+                                                 delegate:self
                                                 onSuccess:completionBlock
                                                 onFailure:errorBlock
                                              checkingResponse:^(id response){

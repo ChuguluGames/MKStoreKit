@@ -102,7 +102,7 @@ didReceiveResponse:(NSURLResponse *)response
     else
         responseData = _receivedData;
     if (isSuccess) {
-        if ([_delegate respondsToSelector:@selector(request:didFinishWithData:)])
+        if (_delegate && [_delegate respondsToSelector:@selector(request:didFinishWithData:)])
             responseData = [_delegate request:self didFinishWithData:responseData];
         if (_onSuccess)
             _onSuccess(responseData);

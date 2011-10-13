@@ -11,7 +11,20 @@
 #import "MKStoreKitConfigs.h"
 
 #ifdef MKSK_REQUEST_ADAPTER_RESTKIT
+
+#undef MKSK_REMOTE_PRODUCT_SERVER
+#define MKSK_REMOTE_PRODUCT_SERVER  nil
+#define MKSK_REQUEST_ADAPTER        MKSKRequestAdapterRestKit
 #import "MKSKRequestAdapterRestKit.h"
-#else
+
+#elif defined MKSK_REQUEST_ADAPTER_CUSTOM // put your custom adapter name here
+
+#define MKSK_REQUEST_ADAPTER        MKSKRequestAdapterCustom    // and here
+#import "MKSKRequestAdapterCustom.h"      // and here
+
+#else // default adapter
+
+#define MKSK_REQUEST_ADAPTER        MKSKRequestAdapterNSURLConnection
 #import "MKSKRequestAdapterNSURLConnection.h"
+
 #endif
