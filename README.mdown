@@ -32,7 +32,7 @@ You can now define your own data source for the products (plist, core data, remo
 
  * implement ``MKStoreManagerDataSource`` protocol
  * pass your data source object to the store at initilization
- ```
+ ```objective-c
 [MKStoreManager sharedManager].dataSource = [YourProductDataSource new];
  ```
 
@@ -47,13 +47,14 @@ It didn't change a lot, but it's more rebust and flexbile
 
 
 Init:
-```[MKStoreManager sharedManager].dataSource = [YourProductDataSource new];
+```objective-c
+[MKStoreManager sharedManager].dataSource = [YourProductDataSource new];
 [[MKStoreManager sharedManager] launch];
 ```
 
 
 Purchasing:
-<pre>
+```objective-c
 [[MKStoreManager sharedManager] buyFeature:YOUR_PRODUCT_ID 
             onComplete:^(id response) 
                 {
@@ -84,7 +85,7 @@ Purchasing:
                         //Handle all other errors    
                     }
                 }];
-</pre>
+```
 
 ***
 ##This is version 4 of MKStoreKit
