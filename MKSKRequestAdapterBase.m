@@ -19,6 +19,7 @@
 #pragma mark - Memory
 - (void) dealloc {
     [_isResponseOK release];
+    [_customHTTPHeaders release];
     [_onSuccess release];
     [_onFailure release];
     [super dealloc];
@@ -33,10 +34,12 @@
               delegate:(id<MKSKRequestAdapterDelegate>)delegate
              onSuccess:(void (^)(id))onSuccess
              onFailure:(void (^)(NSError *))onFailure
+     customHTTPHeaders:(NSDictionary*(^)(id))customHTTPHeaders
       checkingResponse:(BOOL (^)(id))isResponseOK {
     if ((self = [super init])) {
         _onSuccess          = [onSuccess copy];
         _onFailure          = [onFailure copy];
+        _customHTTPHeaders  = [customHTTPHeaders copy];
         _isResponseOK       = [isResponseOK copy];
         _delegate           = delegate;
     }
@@ -49,6 +52,7 @@
                  delegate:(id<MKSKRequestAdapterDelegate>)delegate
                 onSuccess:(void (^)(id))onSuccess
                 onFailure:(void (^)(NSError *))onFailure
+        customHTTPHeaders:(NSDictionary*(^)(id))customHTTPHeaders
          checkingResponse:(BOOL (^)(id))isResponseOK {
     return [[[[self class] alloc] initWithBaseURL:baseURL
                                              path:path
@@ -56,6 +60,7 @@
                                          delegate:delegate
                                         onSuccess:onSuccess
                                         onFailure:onFailure
+                                customHTTPHeaders:customHTTPHeaders
                                  checkingResponse:isResponseOK] autorelease];
 }
 

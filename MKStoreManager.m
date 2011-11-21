@@ -72,9 +72,11 @@
 @synthesize onRestoreFailed;
 @synthesize onRestoreCompleted;
 
-@synthesize customRequestProcessingBlock;
+@synthesize customRemoteServerResponseVerification;
+@synthesize customHTTPHeaders;
 @synthesize customReceiptPostData;
 @synthesize customProductForReviewAccessPostData;
+@synthesize remoteProductServer;
 
 static MKStoreManager* _sharedStoreManager;
 
@@ -83,9 +85,16 @@ static MKStoreManager* _sharedStoreManager;
         self.dataSource             = someDataSource;//[MKStoreManagerDataSourcePlist new];
         _purchasableObjects         = [NSMutableArray new];
         _subscriptionProducts       = [NSMutableDictionary new];
+        self.storeObserver          = nil;
+        self.customRemoteServerResponseVerification = nil;
         self.customReceiptPostData  = nil;
+        self.customHTTPHeaders      = nil;
         self.customProductForReviewAccessPostData = nil;
-        self.customRequestProcessingBlock = nil;
+        self.remoteProductServer    = MKSK_REMOTE_PRODUCT_SERVER;
+        self.onTransactionCancelled = nil;
+        self.onTransactionCompleted = nil;
+        self.onRestoreFailed        = nil;
+        self.onRestoreCompleted     = nil;
     }
     return self;
 }
@@ -95,26 +104,30 @@ static MKStoreManager* _sharedStoreManager;
 }
 
 - (void) launch {
+    if (_storeObserver != nil)
+        return;
     NSAssert(self.dataSource != nil, @"MKStoreKit : data source should not be nil", nil);
-    self.storeObserver = [[MKStoreObserver alloc] init];
-    [[SKPaymentQueue defaultQueue] addTransactionObserver:self.storeObserver];
-    [self.storeObserver release];
+    _storeObserver = [[MKStoreObserver alloc] init];
+    [[SKPaymentQueue defaultQueue] addTransactionObserver:_storeObserver];
     [self requestProductData];
     [self startVerifyingSubscriptionReceipts];
 }
 
 - (void)dealloc {
+    [[SKPaymentQueue defaultQueue] removeTransactionObserver:_storeObserver];
+    self.remoteProductServer = nil;
     self.dataSource = nil;
+    self.customRemoteServerResponseVerification = nil;
+    self.customHTTPHeaders = nil;
     self.customProductForReviewAccessPostData = nil;
     self.customReceiptPostData = nil;
-    self.customRequestProcessingBlock = nil;
     [_subscriptionProducts release], _subscriptionProducts = nil;
     [_purchasableObjects release], _purchasableObjects = nil;
-    [_storeObserver release], _storeObserver = nil;
-    [onTransactionCancelled release], onTransactionCancelled = nil;
-    [onTransactionCompleted release], onTransactionCompleted = nil;
-    [onRestoreFailed release], onRestoreFailed = nil;
-    [onRestoreCompleted release], onRestoreCompleted = nil;
+    self.storeObserver = nil;
+    self.onTransactionCancelled = nil;
+    self.onTransactionCompleted = nil;
+    self.onRestoreFailed = nil;
+    self.onRestoreCompleted = nil;
     [super dealloc];
 }
 

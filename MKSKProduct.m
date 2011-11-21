@@ -91,6 +91,8 @@
 }
 
 + (BOOL) checkVerificationResponse:(id)response forProductId:(NSString*)productId {
+    if ([MKStoreManager sharedManager].customRemoteServerResponseVerification)
+        return [MKStoreManager sharedManager].customRemoteServerResponseVerification(response, productId);
     if (![response isKindOfClass:[NSDictionary class]])
         return NO;
     id responseProductId = [response objectForKey:kMKSKServerResponseProductIdKey];
@@ -111,12 +113,13 @@
             postData = [MKStoreManager sharedManager].customProductForReviewAccessPostData(productId);
         else
             postData = [[self class] productForReviewAccessPostData:productId];
-        [MKSK_REQUEST_ADAPTER requestWithBaseURL:MKSK_REMOTE_PRODUCT_SERVER
+        [MKSK_REQUEST_ADAPTER requestWithBaseURL:[MKStoreManager sharedManager].remoteProductServer
                                             path:MKSK_PRODUCT_VERIFY_PRODUCT_FOR_REVIEW_PATH
                                             body:postData
                                         delegate:nil
                                        onSuccess:completionBlock
                                        onFailure:errorBlock
+                               customHTTPHeaders:[MKStoreManager sharedManager].customHTTPHeaders
                                 checkingResponse:^(id response) {
                                      return [[self class] checkVerificationResponse:response forProductId:productId];
                                 }];
@@ -134,12 +137,13 @@
     else
         postData = [[self class] receiptPostData:self.receipt];
 
-    [MKSK_REQUEST_ADAPTER requestWithBaseURL:MKSK_REMOTE_PRODUCT_SERVER
+    [MKSK_REQUEST_ADAPTER requestWithBaseURL:[MKStoreManager sharedManager].remoteProductServer
                                         path:MKSK_PRODUCT_VERIFY_RECEIPT_PATH
                                         body:postData
                                     delegate:nil
                                    onSuccess:completionBlock
                                    onFailure:errorBlock
+                           customHTTPHeaders:[MKStoreManager sharedManager].customHTTPHeaders
                             checkingResponse:^(id response) {
                                 return [[self class] checkVerificationResponse:response forProductId:self.productId];
                             }];

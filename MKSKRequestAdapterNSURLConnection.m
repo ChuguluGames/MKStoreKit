@@ -9,7 +9,16 @@
  *******************************************************************************/
 
 #import "JSONKit.h"
+#import "NSDictionary+data.h"
 #import "MKSKRequestAdapterNSURLConnection.h"
+
+@interface MKSKRequestAdapterNSURLConnection (private)
+
+- (void) setCustomHTTPHeaders:(NSMutableURLRequest*)request;
+- (BOOL) isJSON;
+- (BOOL) isXML;
+
+@end
 
 @implementation MKSKRequestAdapterNSURLConnection
 
@@ -23,7 +32,7 @@
     return [postData autorelease];
 }
 
-+ (NSURLRequest*) buildRequestWithPostString:(NSString*)postString forURL:(NSURL*)url {
++ (NSMutableURLRequest*) buildRequestWithPostString:(NSString*)postString forURL:(NSURL*)url {
 	NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:url 
                                                               cachePolicy:NSURLRequestReloadIgnoringCacheData 
                                                           timeoutInterval:60];
@@ -32,7 +41,7 @@
     NSString *length = [NSString stringWithFormat:@"%d", [postString length]];
 	[theRequest setValue:length forHTTPHeaderField:@"Content-Length"];	
 	
-	[theRequest setHTTPBody:[postString dataUsingEncoding:NSASCIIStringEncoding]];
+	[theRequest setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
     return theRequest;
 }
 
@@ -44,6 +53,7 @@
               delegate:(id<MKSKRequestAdapterDelegate>)delegate
              onSuccess:(void (^)(id))onSuccess
              onFailure:(void (^)(NSError *))onFailure
+     customHTTPHeaders:(NSDictionary *(^)(id))customHTTPHeaders
       checkingResponse:(BOOL (^)(id))isResponseOK{
     if ((self = [super initWithBaseURL:baseURL
                                   path:path
@@ -51,8 +61,10 @@
                               delegate:delegate
                              onSuccess:onSuccess
                              onFailure:onFailure
+                     customHTTPHeaders:customHTTPHeaders
                       checkingResponse:isResponseOK])) {
         _receivedData = nil;
+        _responseMIMEType = nil;
         NSURL* url = [NSURL URLWithString:baseURL];
         if (path)
             url = [url URLByAppendingPathComponent:path];
@@ -61,7 +73,9 @@
             postData = body;
         else if ([body isKindOfClass:[NSDictionary class]])
             postData = [[self class] buildPostDataString:body];
-        NSURLRequest* request = [[self class] buildRequestWithPostString:postData forURL:url];
+        NSMutableURLRequest* request = [[self class] buildRequestWithPostString:postData forURL:url];
+        if (_customHTTPHeaders)
+            [self setCustomHTTPHeaders:request];
         _connection = [[NSURLConnection connectionWithRequest:request delegate:self] retain];
         [_connection start];
     }
@@ -77,12 +91,35 @@
     [super dealloc];
 }
 
+#pragma mark - Helpers
+
+- (void) setCustomHTTPHeaders:(NSMutableURLRequest*)request {
+    NSDictionary* headers = _customHTTPHeaders(request.HTTPBody);
+    for (NSString* key in [headers allKeys])
+        [request setValue:[headers objectForKey:key] forHTTPHeaderField:key];
+}
+
+- (BOOL) isXML {
+	return (_responseMIMEType &&
+			([_responseMIMEType rangeOfString:@"application/xml"
+                                      options:(NSCaseInsensitiveSearch | NSAnchoredSearch)].length > 0 ||
+             [_responseMIMEType rangeOfString:@"text/xml"
+                                      options:(NSCaseInsensitiveSearch | NSAnchoredSearch)].length > 0));
+}
+
+- (BOOL) isJSON {
+	return (_responseMIMEType &&
+			[_responseMIMEType rangeOfString:@"application/json"
+                                     options:(NSCaseInsensitiveSearch | NSAnchoredSearch)].length > 0);
+}
+
 #pragma mark - Delegates
 #pragma mark <NSURLConnectionDelegate> methods
 
 - (void)connection:(NSURLConnection *)connection
 didReceiveResponse:(NSURLResponse *)response
-{	
+{
+    _responseMIMEType = [response.MIMEType copy];
     _receivedData = [[NSMutableData alloc] init];
 }
 
@@ -97,8 +134,12 @@ didReceiveResponse:(NSURLResponse *)response
     BOOL isSuccess = NO;
     id responseData = nil;
     NSError* parsingError = nil;
-    if ((responseData = [_receivedData objectFromJSONDataWithParseOptions:JKParseOptionStrict error:&parsingError]))
-        isSuccess = _isResponseOK ? _isResponseOK(responseData) : YES;
+    if ([self isXML])
+        responseData = [NSDictionary dictionaryWithData:_receivedData error:&parsingError];
+    else if ([self isJSON])
+        responseData = [_receivedData objectFromJSONDataWithParseOptions:JKParseOptionStrict error:&parsingError];
+    if (responseData != nil)
+        isSuccess = _isResponseOK ? _isResponseOK(responseData) : parsingError == nil;
     else
         responseData = _receivedData;
     if (isSuccess) {

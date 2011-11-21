@@ -65,16 +65,17 @@
     NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kMKSKSharedSecret];
 
     [MKSK_REQUEST_ADAPTER requestWithBaseURL:kMKSKReceiptValidationURL
-                                                     path:nil
-                                                     body:receiptString
-                                                 delegate:self
-                                                onSuccess:completionBlock
-                                                onFailure:errorBlock
-                                             checkingResponse:^(id response){
-                                                 if (![response isKindOfClass:[NSDictionary class]])
-                                                     return NO;
-                                                 return ([(NSDictionary*)response objectForKey:@"receipt"] != nil);
-                                             }];
+                                     path:nil
+                                     body:receiptString
+                                 delegate:self
+                                onSuccess:completionBlock
+                                onFailure:errorBlock
+                        customHTTPHeaders:nil
+                         checkingResponse:^(id response){
+                             if (![response isKindOfClass:[NSDictionary class]])
+                                 return NO;
+                             return ([(NSDictionary*)response objectForKey:@"receipt"] != nil);
+                         }];
 }
 
 - (BOOL) isSubscriptionActive

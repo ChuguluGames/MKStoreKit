@@ -21,6 +21,7 @@
  @param delegate        should be MKSKProduct and/or MKSKSubscriptionProduct
  @param onSuccess       block executed if the sever sends back a valid response (correct status code + JSON mime type + custom validation, see isResponseOK param) , the parameter is the response (dictionary)
  @param onFailure       block executed if response status is not ok OR if the response cannot be parsed (not or malformed JSON) OR if custom validation fails
+ @param customHTTPHeaders block executed after the request creation, it gets request body in param so you can prepare your headers with it (like hashing/signing body)
  @param isResponseOK    custom validation of the JSON response, here you can check if you have all the required fields OR for a custom status from the server
  */
 
@@ -30,6 +31,7 @@
               delegate:(id<MKSKRequestAdapterDelegate>)delegate
              onSuccess:(void(^)(id))onSuccess
              onFailure:(void(^)(NSError*))onFailure
+     customHTTPHeaders:(NSDictionary*(^)(id))customHTTPHeaders
       checkingResponse:(BOOL(^)(id))isResponseOK;
 
 + (id) requestWithBaseURL:(NSString*)baseURL 
@@ -38,6 +40,7 @@
                  delegate:(id<MKSKRequestAdapterDelegate>)delegate
                 onSuccess:(void(^)(id))onSuccess
                 onFailure:(void(^)(NSError*))onFailure
+        customHTTPHeaders:(NSDictionary*(^)(id))customHTTPHeaders
          checkingResponse:(BOOL(^)(id))isResponseOK;
 
 @end

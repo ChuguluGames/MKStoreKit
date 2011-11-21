@@ -14,6 +14,7 @@
 @interface MKSKRequestAdapterNSURLConnection : MKSKRequestAdapterBase<MKSKRequestAdapterProtocol> {
     NSMutableData*      _receivedData;
     NSURLConnection*    _connection;
+    NSString*           _responseMIMEType;
 }
 
 @end

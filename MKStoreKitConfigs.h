@@ -80,4 +80,4 @@
 #define kMKSKSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
 
 
-#define MKSK_REQUEST_ADAPTER_RESTKIT //change this if needed (see MKSKRequestAdapter.h), comment out for default adapter
+//#define MKSK_REQUEST_ADAPTER_RESTKIT //change this if needed (see MKSKRequestAdapter.h), comment out for default adapter

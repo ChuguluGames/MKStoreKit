@@ -48,9 +48,11 @@
     BOOL                    _productsAvailable;
 }
 
-@property (nonatomic, copy) void (^customRequestProcessingBlock)(NSMutableURLRequest*);
+@property (nonatomic, copy) BOOL (^customRemoteServerResponseVerification)(id receivedData, NSString* productId);
+@property (nonatomic, copy) NSDictionary* (^customHTTPHeaders)(id requestBody);
 @property (nonatomic, copy) NSDictionary* (^customReceiptPostData)(NSData* receipt);
 @property (nonatomic, copy) NSDictionary* (^customProductForReviewAccessPostData)(NSString* productId);
+@property (nonatomic, retain) NSString* remoteProductServer;
 
 @property (nonatomic, readonly) NSMutableArray      *purchasableObjects;
 @property (nonatomic, readonly) NSMutableDictionary *subscriptionProducts;

@@ -16,6 +16,7 @@
     void                            (^_onSuccess)(id);
     void                            (^_onFailure)(NSError*);
     BOOL                            (^_isResponseOK)(id);
+    NSDictionary                    *(^_customHTTPHeaders)(id);
 }
 
 @end
