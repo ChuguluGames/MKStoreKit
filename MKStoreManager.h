@@ -78,8 +78,8 @@
             onError:(void (^)(NSError*)) errorBlock;
 
 // use this method to restore a purchase
-- (void) restorePreviousTransactionsOnComplete:(void (^)(void)) completionBlock
-                                       onError:(void (^)(NSError*)) errorBlock;
+- (void) restorePreviousTransactionsOnComplete:(void (^)(SKPaymentQueue*)) completionBlock
+                                       onError:(void (^)(SKPaymentQueue*, NSError*)) errorBlock;;
 
 - (BOOL) canConsumeProduct:(NSString*) productName quantity:(int) quantity;
 - (BOOL) consumeProduct:(NSString*) productName quantity:(int) quantity;
@@ -90,6 +90,6 @@
 +(void) setObject:(id) object forKey:(NSString*) key;
 +(NSNumber*) numberForKey:(NSString*) key;
 
--(void) restoreCompleted;
--(void) restoreFailedWithError:(NSError*) error;
+-(void) restoreCompleted:(SKPaymentQueue*)queue;
+-(void) restoreForQueue:(SKPaymentQueue*)queue failedWithError:(NSError*)error;
 @end

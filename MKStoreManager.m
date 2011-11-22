@@ -45,8 +45,8 @@
 @property (nonatomic, copy) void (^onTransactionCancelled)(NSError *error);
 @property (nonatomic, copy) void (^onTransactionCompleted)(NSString *productId);
 
-@property (nonatomic, copy) void (^onRestoreFailed)(NSError* error);
-@property (nonatomic, copy) void (^onRestoreCompleted)();
+@property (nonatomic, copy) void (^onRestoreFailed)(SKPaymentQueue* queue, NSError* error);
+@property (nonatomic, copy) void (^onRestoreCompleted)(SKPaymentQueue* queue);
 
 @property (nonatomic, retain) MKStoreObserver *storeObserver;
 
@@ -245,8 +245,8 @@ static MKStoreManager* _sharedStoreManager;
 
 #pragma mark Internal MKStoreKit functions
 
-- (void) restorePreviousTransactionsOnComplete:(void (^)(void)) completionBlock
-                                       onError:(void (^)(NSError*)) errorBlock
+- (void) restorePreviousTransactionsOnComplete:(void (^)(SKPaymentQueue*)) completionBlock
+                                       onError:(void (^)(SKPaymentQueue*, NSError*)) errorBlock
 {
     self.onRestoreCompleted = completionBlock;
     self.onRestoreFailed = errorBlock;
@@ -254,17 +254,17 @@ static MKStoreManager* _sharedStoreManager;
 	[[SKPaymentQueue defaultQueue] restoreCompletedTransactions];
 }
 
--(void) restoreCompleted
+-(void) restoreCompleted:(SKPaymentQueue*)queue
 {
-    if(self.onRestoreCompleted)
-        self.onRestoreCompleted();
+    if (self.onRestoreCompleted)
+        self.onRestoreCompleted(queue);
     self.onRestoreCompleted = nil;
 }
 
--(void) restoreFailedWithError:(NSError*) error
+-(void) restoreForQueue:(SKPaymentQueue*)queue failedWithError:(NSError*)error
 {
-    if(self.onRestoreFailed)
-        self.onRestoreFailed(error);
+    if (self.onRestoreFailed)
+        self.onRestoreFailed(queue, error);
     self.onRestoreFailed = nil;
 }
 

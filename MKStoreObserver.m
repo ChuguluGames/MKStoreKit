@@ -55,12 +55,12 @@
 
 - (void)paymentQueue:(SKPaymentQueue *)queue restoreCompletedTransactionsFailedWithError:(NSError *)error
 {
-    [[MKStoreManager sharedManager] restoreFailedWithError:error];
+    [[MKStoreManager sharedManager] restoreForQueue:queue failedWithError:error];
 }
 
 - (void)paymentQueueRestoreCompletedTransactionsFinished:(SKPaymentQueue *)queue
 {
-    [[MKStoreManager sharedManager] restoreCompleted];
+    [[MKStoreManager sharedManager] restoreCompleted:queue];
 }
 
 - (void) failedTransaction:(SKPaymentTransaction *)transaction
