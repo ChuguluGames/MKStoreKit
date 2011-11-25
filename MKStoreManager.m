@@ -50,7 +50,6 @@
 
 @property (nonatomic, retain) MKStoreObserver *storeObserver;
 
-- (void) requestProductData;
 - (void) startVerifyingSubscriptionReceipts;
 -(void) rememberPurchaseOfProduct:(NSString*) productIdentifier;
 -(void) addToQueue:(NSString*) productId;
@@ -85,7 +84,8 @@ static MKStoreManager* _sharedStoreManager;
         self.dataSource             = someDataSource;//[MKStoreManagerDataSourcePlist new];
         _purchasableObjects         = [NSMutableArray new];
         _subscriptionProducts       = [NSMutableDictionary new];
-        self.storeObserver          = nil;
+        _storeObserver              = [MKStoreObserver new];
+        [[SKPaymentQueue defaultQueue] addTransactionObserver:_storeObserver];
         self.customRemoteServerResponseVerification = nil;
         self.customReceiptPostData  = nil;
         self.customHTTPHeaders      = nil;
@@ -95,22 +95,14 @@ static MKStoreManager* _sharedStoreManager;
         self.onTransactionCompleted = nil;
         self.onRestoreFailed        = nil;
         self.onRestoreCompleted     = nil;
+        _fetchingProductInfo        = NO;
+        _restoringProducts          = NO;
     }
     return self;
 }
 
 - (id) init {
     return [self initWithDataSource:nil];
-}
-
-- (void) launch {
-    if (_storeObserver != nil)
-        return;
-    NSAssert(self.dataSource != nil, @"MKStoreKit : data source should not be nil", nil);
-    _storeObserver = [[MKStoreObserver alloc] init];
-    [[SKPaymentQueue defaultQueue] addTransactionObserver:_storeObserver];
-    [self requestProductData];
-    [self startVerifyingSubscriptionReceipts];
 }
 
 - (void)dealloc {
@@ -248,9 +240,11 @@ static MKStoreManager* _sharedStoreManager;
 - (void) restorePreviousTransactionsOnComplete:(void (^)(SKPaymentQueue*)) completionBlock
                                        onError:(void (^)(SKPaymentQueue*, NSError*)) errorBlock
 {
+    if (_restoringProducts == YES)
+        return ;
+    _restoringProducts = YES;
     self.onRestoreCompleted = completionBlock;
     self.onRestoreFailed = errorBlock;
-    
 	[[SKPaymentQueue defaultQueue] restoreCompletedTransactions];
 }
 
@@ -259,6 +253,7 @@ static MKStoreManager* _sharedStoreManager;
     if (self.onRestoreCompleted)
         self.onRestoreCompleted(queue);
     self.onRestoreCompleted = nil;
+    _restoringProducts = NO;
 }
 
 -(void) restoreForQueue:(SKPaymentQueue*)queue failedWithError:(NSError*)error
@@ -266,12 +261,15 @@ static MKStoreManager* _sharedStoreManager;
     if (self.onRestoreFailed)
         self.onRestoreFailed(queue, error);
     self.onRestoreFailed = nil;
+    _restoringProducts = NO;
 }
 
 -(void) requestProductData
 {
-    if (!self.dataSource)
-        return;
+    NSAssert(self.dataSource != nil, @"MKStoreKit : data source should not be nil", nil);
+    if (_fetchingProductInfo == YES)
+        return ;
+    _fetchingProductInfo = YES;
     NSMutableSet* productsSet = [[NSMutableSet alloc] init];
     [productsSet addObjectsFromArray:[[self.dataSource consumableProducts] allKeys]];
     [productsSet addObjectsFromArray:[self.dataSource nonConsumableProducts]];
@@ -316,13 +314,15 @@ static MKStoreManager* _sharedStoreManager;
 
 	[request autorelease];
 
-	_productsAvailable = YES;    
+	_productsAvailable = YES;
+    _fetchingProductInfo = NO;
     [[NSNotificationCenter defaultCenter] postNotificationName:kMKSKProductFetchedNotification 
                                                         object:[NSNumber numberWithBool:_productsAvailable]];
 }
 
 - (void)request:(SKRequest *)request didFailWithError:(NSError *)error
 {
+    _fetchingProductInfo = NO;
 	[request autorelease];
 
 	_productsAvailable = NO;	
@@ -474,8 +474,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 
 - (void) startVerifyingSubscriptionReceipts
 {
-    if (!self.dataSource)
-        return ;
+    NSAssert(self.dataSource != nil, @"MKStoreKit : data source should not be nil", nil);
 
     for(NSString *productId in [[self.dataSource subscriptionProducts] allKeys])
     {

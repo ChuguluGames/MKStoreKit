@@ -46,6 +46,8 @@
     NSMutableArray*         _purchasableObjects;
     NSMutableDictionary*    _subscriptionProducts;
     BOOL                    _productsAvailable;
+    BOOL                    _fetchingProductInfo;
+    BOOL                    _restoringProducts;
 }
 
 @property (nonatomic, copy) BOOL (^customRemoteServerResponseVerification)(id receivedData, NSString* productId);
@@ -92,4 +94,8 @@
 
 -(void) restoreCompleted:(SKPaymentQueue*)queue;
 -(void) restoreForQueue:(SKPaymentQueue*)queue failedWithError:(NSError*)error;
+
+- (void) requestProductData;
+- (void) startVerifyingSubscriptionReceipts;
+
 @end
