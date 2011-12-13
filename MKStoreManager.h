@@ -64,7 +64,7 @@
 
 // These are the methods you will be using in your app
 + (MKStoreManager*)sharedManager;
-- (void) launch;
+
 - (id) initWithDataSource:(id<MKStoreManagerDataSource>)someDataSource;
 
 // this is a static method, since it doesn't require the store manager to be initialized prior to calling
