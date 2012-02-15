@@ -26,6 +26,7 @@
               delegate:(id<MKSKRequestAdapterDelegate>)delegate
              onSuccess:(void (^)(id))onSuccess
              onFailure:(void (^)(NSError *))onFailure
+     customHTTPHeaders:(NSDictionary*(^)(id))customHTTPHeaders
       checkingResponse:(BOOL (^)(id))isResponseOK{
     if ((self = [super initWithBaseURL:baseURL
                                   path:path
@@ -33,6 +34,7 @@
                               delegate:delegate
                              onSuccess:onSuccess
                              onFailure:onFailure
+                     customHTTPHeaders:customHTTPHeaders
                       checkingResponse:isResponseOK])) {
         if (baseURL)
             _client = [[RKClient alloc] initWithBaseURL:baseURL];
