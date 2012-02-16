@@ -93,6 +93,7 @@ static MKStoreManager* _sharedStoreManager;
         self.remoteProductServer    = MKSK_REMOTE_PRODUCT_SERVER;
         self.onTransactionCancelled = nil;
         self.onTransactionCompleted = nil;
+        self.onTransactionError     = nil;
         self.onRestoreFailed        = nil;
         self.onRestoreCompleted     = nil;
         _fetchingProductInfo        = NO;
@@ -118,6 +119,7 @@ static MKStoreManager* _sharedStoreManager;
     self.storeObserver = nil;
     self.onTransactionCancelled = nil;
     self.onTransactionCompleted = nil;
+    self.onTransactionError = nil;
     self.onRestoreFailed = nil;
     self.onRestoreCompleted = nil;
     [super dealloc];
@@ -416,8 +418,10 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
              [alert show];
              [alert release];
              
-             if(self.onTransactionCompleted)
+             if (self.onTransactionCompleted) {
                  self.onTransactionCompleted(featureId);
+                 self.onTransactionCompleted = nil;
+             }
          }
          else
          {
@@ -540,17 +544,21 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
             [thisProduct verifyReceiptOnComplete:self.onTransactionCompleted
                                          onError:^(NSError* error)
              {
-                 if(self.onTransactionError)
+                 if(self.onTransactionError) {
                      self.onTransactionError(error);
-                 else
+                     self.onTransactionError = nil;
+                 } else
                      NSLog(@"The receipt could not be verified");
              }];
+            self.onTransactionCompleted = nil;
         }
         else
         {
             [self rememberPurchaseOfProduct:productIdentifier];
-            if (self.onTransactionCompleted)
+            if (self.onTransactionCompleted) {
                 self.onTransactionCompleted(productIdentifier);
+                self.onTransactionCompleted = nil;
+            }
         }
     }
 }
@@ -581,8 +589,10 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 	NSLog(@"User cancelled transaction: %@", [transaction description]);
     NSLog(@"error: %@", transaction.error);
 #endif
-    if(self.onTransactionCancelled)
+    if(self.onTransactionCancelled) {
         self.onTransactionCancelled(transaction.error);
+        self.onTransactionCancelled = nil;
+    }
 }
 
 - (void) transactionFailed:(SKPaymentTransaction *)transaction
@@ -591,8 +601,10 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
     NSLog(@"Failed transaction: %@", [transaction description]);
     NSLog(@"error: %@", transaction.error);
 #endif
-    if (self.onTransactionError)
+    if (self.onTransactionError) {
         self.onTransactionError(transaction.error);
+        self.onTransactionError = nil;
+    }
 }
 
 @end
