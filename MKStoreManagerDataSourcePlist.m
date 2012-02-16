@@ -40,7 +40,7 @@ NSString* const kMKSKConfigConsumableQuantityKey        = @"Count";
     return [_storeKitItems objectForKey:kMKSKConfigConsumablesKey];
 }
 
-- (NSArray*) nonConsumableProducts
+- (NSDictionary*) nonConsumableProducts
 {
     return [_storeKitItems objectForKey:kMKSKConfigNonConsumablesKey];
 }

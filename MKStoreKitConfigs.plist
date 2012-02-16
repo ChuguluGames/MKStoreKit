@@ -13,9 +13,10 @@
 		</dict>
 	</dict>
 	<key>Non-Consumables</key>
-	<array>
-		<string>com.mugunthkumar.inappsubtest.nonconsumable</string>
-	</array>
+	<dict>
+		<key>com.mugunthkumar.inappsubtest.nonconsumable</key>
+		<string>Product Name</string>
+	</dict>
 	<key>Subscriptions</key>
 	<dict>
 		<key>com.mugunthkumar.subinapptest.wk1</key>

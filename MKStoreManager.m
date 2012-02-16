@@ -274,7 +274,7 @@ static MKStoreManager* _sharedStoreManager;
     _fetchingProductInfo = YES;
     NSMutableSet* productsSet = [[NSMutableSet alloc] init];
     [productsSet addObjectsFromArray:[[self.dataSource consumableProducts] allKeys]];
-    [productsSet addObjectsFromArray:[self.dataSource nonConsumableProducts]];
+    [productsSet addObjectsFromArray:[[self.dataSource nonConsumableProducts] allKeys]];
     [productsSet addObjectsFromArray:[[self.dataSource subscriptionProducts] allKeys]];
 
 	SKProductsRequest *request= [[SKProductsRequest alloc] initWithProductIdentifiers:productsSet];
@@ -292,7 +292,7 @@ static MKStoreManager* _sharedStoreManager;
     for (NSString* productId in [[self.dataSource consumableProducts] allKeys])
         if (![SFHFKeychainUtils deleteItemForUsername:productId andServiceName:kMKSKServiceName error:nil])
             isSuccess = NO;
-    for (NSString* productId in [self.dataSource nonConsumableProducts])
+    for (NSString* productId in [[self.dataSource nonConsumableProducts] allKeys])
         if (![SFHFKeychainUtils deleteItemForUsername:productId andServiceName:kMKSKServiceName error:nil])
             isSuccess = NO;
     for (NSString* productId in [[self.dataSource subscriptionProducts] allKeys])

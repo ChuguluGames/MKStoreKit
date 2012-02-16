@@ -14,7 +14,7 @@
 @protocol MKStoreManagerDataSource <NSObject>
 
 - (NSDictionary*) consumableProducts;
-- (NSArray*) nonConsumableProducts;
+- (NSDictionary*) nonConsumableProducts;
 - (NSDictionary*) subscriptionProducts;
 
 - (NSString*) nameForConsumable:(id)consumable;
