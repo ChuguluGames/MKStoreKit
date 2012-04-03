@@ -522,6 +522,10 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
                                                                  object:productIdentifier];
 
              [MKStoreManager setObject:receiptData forKey:productIdentifier];
+             
+             if (self.onTransactionCompleted) {
+                 self.onTransactionCompleted(productIdentifier);
+             }
          }
                                              onError:^(NSError* error)
          {

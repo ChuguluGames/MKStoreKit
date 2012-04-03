@@ -61,11 +61,13 @@
 #endif
 
 #ifndef MKSK_USE_REMOTE_PRODUCT_SERVER
-#define MKSK_USE_REMOTE_PRODUCT_SERVER      NO
+#define MKSK_USE_REMOTE_PRODUCT_SERVER      YES
 #endif
 
 #ifndef MKSK_REMOTE_PRODUCT_SERVER
-#define MKSK_REMOTE_PRODUCT_SERVER          nil
+#define MKSK_REMOTE_PRODUCT_SERVER          @"http://tele7jeux-preprod.chugulu.com/"
+//#define MKSK_REMOTE_PRODUCT_SERVER          @"http://192.168.1.116:3000/"
+
 #endif
 
 #ifndef MKSK_PRODUCT_VERIFY_PRODUCT_FOR_REVIEW_PATH
@@ -73,11 +75,11 @@
 #endif
 
 #ifndef MKSK_PRODUCT_VERIFY_RECEIPT_PATH
-#define MKSK_PRODUCT_VERIFY_RECEIPT_PATH             @"verifyProduct.php"
+#define MKSK_PRODUCT_VERIFY_RECEIPT_PATH             @"api/purchases/verify_receipt"
 #endif
 
 #warning Shared Secret Missing Ignore this warning if you don't use auto-renewable subscriptions
-#define kMKSKSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
+#define kMKSKSharedSecret @"ca7a8da3a9fa4d32a67ccc210a5bdce5"
 
 
 //#define MKSK_REQUEST_ADAPTER_RESTKIT //change this if needed (see MKSKRequestAdapter.h), comment out for default adapter

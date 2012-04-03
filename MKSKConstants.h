@@ -10,12 +10,13 @@
 
 #import <Foundation/Foundation.h>
 
-static NSString* const kMKSKReceiptValidationURL = 
-#ifndef NDEBUG
-@"https://sandbox.itunes.apple.com/verifyReceipt";
-#else
-@"https://buy.itunes.apple.com/verifyReceipt";
-#endif
+//static NSString* const kMKSKReceiptValidationURL = @"http://192.168.1.116:3000/api/subscription_purchases/verify_subscription";
+static NSString* const kMKSKReceiptValidationURL = @"http://tele7jeux-preprod.chugulu.com/api/subscription_purchases/verify_subscription";
+//#ifndef NDEBUG
+//@"https://sandbox.itunes.apple.com/verifyReceipt";
+//#else
+//@"https://buy.itunes.apple.com/verifyReceipt";
+//#endif
 
 static NSString* const kMKSKReceiptStringKey                   = @"MK_STOREKIT_RECEIPTS_STRING";
 

@@ -35,6 +35,7 @@
 #import "MKStoreManager.h"
 #import "NSData+Base64.h"
 #import "MKSKRequestAdapter.h"
+#import "NSObject+Additions.h"
 
 @implementation MKSKSubscriptionProduct
 @synthesize receipt;
@@ -61,20 +62,35 @@
 
 - (void) verifyReceiptOnComplete:(void (^)(NSNumber*)) completionBlock
                          onError:(void (^)(NSError*)) errorBlock
-{        
-    NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kMKSKSharedSecret];
+{      
+//#ifdef INAPP_PURCHASE_SANDBOX
+//    NSString *receiptString = [NSString stringWithFormat:@"\"receipt-data\":\"%@\" \"password\":\"%@\" \"sandbox\":\"true\"", [self.receipt base64EncodedString], kMKSKSharedSecret];
+//#else
+//    NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kMKSKSharedSecret];
+//#endif
+    
 
+    NSMutableDictionary    *postData = [NSMutableDictionary dictionaryWithDictionary:[MKStoreManager sharedManager].customReceiptPostData(self.receipt)];
+    
+    [postData setObject:kMKSKSharedSecret forKey:@"password"];
+#ifdef INAPP_PURCHASE_SANDBOX
+    [postData setObject:@"true" forKey:@"sandbox"];
+#endif
+
+    
+    
     [MKSK_REQUEST_ADAPTER requestWithBaseURL:kMKSKReceiptValidationURL
                                      path:nil
-                                     body:receiptString
+                                     body:postData
                                  delegate:self
                                 onSuccess:completionBlock
                                 onFailure:errorBlock
                         customHTTPHeaders:nil
                          checkingResponse:^(id response){
+                             NSLog(@"response: %@", response);
                              if (![response isKindOfClass:[NSDictionary class]])
                                  return NO;
-                             return ([(NSDictionary*)response objectForKey:@"receipt"] != nil);
+                             return ([[[(NSDictionary*)response objectForKey:@"success"] checkNull] intValue]);
                          }];
 }
 
