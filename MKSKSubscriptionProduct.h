@@ -44,4 +44,6 @@
 
 - (BOOL) isSubscriptionActive;
 - (id) initWithProductId:(NSString*) productId subscriptionDays:(int) days;
++ (NSDictionary*) receiptPostData:(NSData*)receipt;
++ (BOOL) checkVerificationResponse:(id)response forProductId:(NSString*)productId;
 @end

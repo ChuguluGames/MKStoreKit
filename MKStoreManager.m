@@ -403,7 +403,7 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
     self.onTransactionError     = errorBlock;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-    [MKSKProduct verifyProductForReviewAccess:featureId
+    [MKSKProduct verifyProductForReviewAccess:featureId 
                                    onComplete:^(NSNumber * isAllowed)
      {
          if([isAllowed boolValue])
@@ -475,10 +475,12 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 - (void) startVerifyingSubscriptionReceipts
 {
     NSAssert(self.dataSource != nil, @"MKStoreKit : data source should not be nil", nil);
-
-    for(NSString *productId in [[self.dataSource subscriptionProducts] allKeys])
+    NSDictionary *subcriptionProducts = [self.dataSource subscriptionProducts];
+    NSLog(@"sub nb %d", [subcriptionProducts count]);
+    for(NSString *productId in [subcriptionProducts allKeys])
     {
-        MKSKSubscriptionProduct *product = [[[MKSKSubscriptionProduct alloc] initWithProductId:productId subscriptionDays:[[[self.dataSource subscriptionProducts] objectForKey:productId] intValue]] autorelease];
+        
+        MKSKSubscriptionProduct *product = [[[MKSKSubscriptionProduct alloc] initWithProductId:productId subscriptionDays:[[subcriptionProducts objectForKey:productId] intValue]] autorelease];
         product.receipt = [MKStoreManager dataForKey:productId]; // cached receipt
         
         if(product.receipt)
@@ -525,7 +527,8 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
          }
                                              onError:^(NSError* error)
          {
-             NSLog(@"%@", [error description]);
+             
+             NSLog(@"error %@", [error localizedDescription]);
          }];
     }        
     else

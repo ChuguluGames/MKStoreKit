@@ -42,6 +42,25 @@
 @synthesize productId;
 @synthesize verifiedReceiptDictionary;
 
++ (BOOL) checkVerificationResponse:(id)response forProductId:(NSString*)productId {
+    if ([MKStoreManager sharedManager].customRemoteServerResponseVerification)
+        return [MKStoreManager sharedManager].customRemoteServerResponseVerification(response, productId);
+    if (![response isKindOfClass:[NSDictionary class]])
+        return NO;
+    id responseProductId = [response objectForKey:kMKSKServerResponseProductIdKey];
+    return (responseProductId != nil && [responseProductId isKindOfClass:[NSString class]] && [productId isEqualToString:responseProductId]);
+}
+
+
++ (NSDictionary*) receiptPostData:(NSData*)receipt {
+	NSString *receiptDataString = [[NSString alloc] initWithData:receipt 
+                                                        encoding:NSASCIIStringEncoding];
+    
+	NSDictionary *postData = [NSDictionary dictionaryWithObject:receiptDataString forKey:@"receiptdata"];
+	[receiptDataString release];
+    return postData;
+}
+
 -(id) initWithProductId:(NSString*) aProductId subscriptionDays:(int) days
 {
     if((self = [super init]))
@@ -62,49 +81,88 @@
 - (void) verifyReceiptOnComplete:(void (^)(NSNumber*)) completionBlock
                          onError:(void (^)(NSError*)) errorBlock
 {        
-    NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kMKSKSharedSecret];
 
-    [MKSK_REQUEST_ADAPTER requestWithBaseURL:kMKSKReceiptValidationURL
-                                     path:nil
-                                     body:receiptString
-                                 delegate:self
-                                onSuccess:completionBlock
-                                onFailure:errorBlock
-                        customHTTPHeaders:nil
-                         checkingResponse:^(id response){
-                             if (![response isKindOfClass:[NSDictionary class]])
-                                 return NO;
-                             return ([(NSDictionary*)response objectForKey:@"receipt"] != nil);
-                         }];
+
+
+    if(MKSK_USE_REMOTE_PRODUCT_SERVER && MKSK_REMOTE_PRODUCT_MODEL && MKSK_SUBSCRIPTION_PRODUCT_VERIFY_RECEIPT_PATH)
+    {
+        NSDictionary* postData = nil;
+        if ([MKStoreManager sharedManager].customReceiptPostData)
+            postData = [MKStoreManager sharedManager].customReceiptPostData(self.receipt);
+        else{
+            postData = [[self class] receiptPostData:self.receipt];
+        }
+        NSLog(@"postData %@", postData);
+        [MKSK_REQUEST_ADAPTER requestWithBaseURL:[MKStoreManager sharedManager].remoteProductServer
+                                            path:MKSK_SUBSCRIPTION_PRODUCT_VERIFY_RECEIPT_PATH
+                                            body:postData
+                                        delegate:self
+                                       onSuccess:completionBlock
+                                       onFailure:errorBlock
+                               customHTTPHeaders:[MKStoreManager sharedManager].customHTTPHeaders
+                                checkingResponse:^(id response) {
+                                    return [[self class] checkVerificationResponse:response forProductId:self.productId];
+
+                                }];
+    
+    }else
+    {
+        NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kMKSKSharedSecret];
+        //verify from device side directly to Apple with Shared Secret
+        [MKSK_REQUEST_ADAPTER requestWithBaseURL:kMKSKReceiptValidationURL
+                                            path:nil
+                                            body:receiptString
+                                        delegate:self
+                                       onSuccess:completionBlock
+                                       onFailure:errorBlock
+                               customHTTPHeaders:nil
+                                checkingResponse:^(id response){
+                                    if (![response isKindOfClass:[NSDictionary class]])
+                                        return NO;
+                                    return ([(NSDictionary*)response objectForKey:@"receipt"] != nil);
+                                }];
+
+    }
+    
+    
+   
+
 }
 
 - (BOOL) isSubscriptionActive
 {
-    NSString *purchaseDateString = [[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"purchase_date"];
-    if (!purchaseDateString)
-        return NO;
-    NSDateFormatter *df = [[NSDateFormatter alloc] init];
+    if([[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"expires_date"]){
+        
+        NSTimeInterval expiresDate = [[[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"expires_date"] doubleValue]/1000.0;        
+        return expiresDate > [[NSDate date] timeIntervalSince1970];
+        
+	}else{
+        NSString *purchaseDateString = [[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"purchase_date"];
+        if (!purchaseDateString)
+            return NO;
+        NSDateFormatter *df = [[NSDateFormatter alloc] init];
 
-    //2011-07-03 05:31:55 Etc/GMT
-    purchaseDateString = [purchaseDateString stringByReplacingOccurrencesOfString:@" Etc/GMT" withString:@""];    
-    NSLocale *POSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
-    [df setLocale:POSIXLocale];
-    [df setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];    
-    [df setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
-    
-    NSDate *purchasedDate = [df dateFromString: purchaseDateString];
-    [df release];
-    
-    int numberOfDays = [purchasedDate timeIntervalSinceNow] / (-86400.0);    
-    return (self.subscriptionDays > numberOfDays);
+        //2011-07-03 05:31:55 Etc/GMT
+        purchaseDateString = [purchaseDateString stringByReplacingOccurrencesOfString:@" Etc/GMT" withString:@""];    
+        NSLocale *POSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
+        [df setLocale:POSIXLocale];
+        [df setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];    
+        [df setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+        
+        NSDate *purchasedDate = [df dateFromString: purchaseDateString];
+        [df release];
+        
+        int numberOfDays = [purchasedDate timeIntervalSinceNow] / (-86400.0);    
+        return (self.subscriptionDays > numberOfDays);
+    }
 }
 
 #pragma mark - Delegates
 #pragma mark <MKSKRequestAdapterDelegate> methods
 
 - (id) request:(id<MKSKRequestAdapterProtocol>)request didFinishWithData:(id)responseData {
-    self.verifiedReceiptDictionary = responseData;
-    return [NSNumber numberWithBool:[self isSubscriptionActive]];
+        self.verifiedReceiptDictionary = responseData;
+        return [NSNumber numberWithBool:[self isSubscriptionActive]];   
 }
 
 @end
