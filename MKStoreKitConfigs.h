@@ -72,6 +72,11 @@
 #define MKSK_PRODUCT_VERIFY_PRODUCT_FOR_REVIEW_PATH  @"featureCheck.php"
 #endif
 
+#ifndef MKSK_SUBSCRIPTION_PRODUCT_VERIFY_RECEIPT_PATH
+#define MKSK_SUBSCRIPTION_PRODUCT_VERIFY_RECEIPT_PATH  @"featureCheck.php"
+#endif
+
+
 #ifndef MKSK_PRODUCT_VERIFY_RECEIPT_PATH
 #define MKSK_PRODUCT_VERIFY_RECEIPT_PATH             @"verifyProduct.php"
 #endif
