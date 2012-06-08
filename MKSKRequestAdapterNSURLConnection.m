@@ -95,8 +95,15 @@
 
 - (void) setCustomHTTPHeaders:(NSMutableURLRequest*)request {
     NSDictionary* headers = _customHTTPHeaders(request.HTTPBody);
-    for (NSString* key in [headers allKeys])
-        [request setValue:[headers objectForKey:key] forHTTPHeaderField:key];
+    for (NSString* key in [headers allKeys]) {
+        id value = [headers objectForKey:key];
+        if ([value isKindOfClass:[NSNumber class]])
+             value = [value stringValue];
+        if ([value isKindOfClass:[NSString class]])
+            [request setValue:value forHTTPHeaderField:key];
+        else
+            NSLog(@"MKStore warning: custom HTTP header %@ is not a string (%@)", key, value);
+    }
 }
 
 - (BOOL) isXML {
