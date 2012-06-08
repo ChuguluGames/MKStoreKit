@@ -33,6 +33,7 @@
 #import "MKSKConstants.h"
 #import "MKSKProduct.h"
 #import "MKSKRequestAdapter.h"
+#import "NSData+Base64.h"
 
 @implementation MKSKProduct
 @synthesize receipt;
@@ -61,13 +62,8 @@
 #pragma mark -
 #pragma mark In-App purchases promo codes support
 
-+ (NSDictionary*) receiptPostData:(NSData*)receipt {
-	NSString *receiptDataString = [[NSString alloc] initWithData:receipt 
-                                                        encoding:NSASCIIStringEncoding];
-    
-	NSDictionary *postData = [NSDictionary dictionaryWithObject:receiptDataString forKey:@"receiptdata"];
-	[receiptDataString release];
-    return postData;
++ (NSDictionary*) receiptPostData:(NSData*)receipt {   
+    return [NSDictionary dictionaryWithObject:[receipt base64EncodedString] forKey:@"receiptdata"];
 }
 
 + (NSDictionary*) productForReviewAccessPostData:(NSString*)productId {
