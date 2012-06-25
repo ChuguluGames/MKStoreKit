@@ -50,4 +50,7 @@
 +(void) verifyProductForReviewAccess:(NSString*) productId
                           onComplete:(void (^)(NSNumber*)) completionBlock
                              onError:(void (^)(NSError*)) errorBlock;
+
++ (NSMutableDictionary*) receiptPostData:(NSData*)receipt;
+
 @end

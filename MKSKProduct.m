@@ -62,8 +62,8 @@
 #pragma mark -
 #pragma mark In-App purchases promo codes support
 
-+ (NSDictionary*) receiptPostData:(NSData*)receipt {   
-    return [NSDictionary dictionaryWithObject:[receipt base64EncodedString] forKey:@"receiptdata"];
++ (NSMutableDictionary*) receiptPostData:(NSData*)receipt {
+    return [NSMutableDictionary dictionaryWithObject:[receipt base64EncodedString] forKey:@"receiptdata"];
 }
 
 + (NSDictionary*) productForReviewAccessPostData:(NSString*)productId {
