@@ -74,7 +74,7 @@
                          checkingResponse:^(id response){
                              if (![response isKindOfClass:[NSDictionary class]])
                                  return NO;
-                             return ([(NSDictionary*)response objectForKey:@"receipt"] != nil);
+                             return (BOOL)([(NSDictionary*)response objectForKey:@"receipt"] != nil);
                          }];
 }
 
