@@ -441,8 +441,12 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
 {
     if ([SKPaymentQueue canMakePayments])
 	{
-        SKMutablePayment* payment = [SKMutablePayment paymentWithProductIdentifier:productId];
-		[[SKPaymentQueue defaultQueue] addPayment:payment];
+        for (SKProduct* product in self.purchasableObjects)
+            if ([product.productIdentifier isEqualToString:productId]) {
+                SKMutablePayment* payment = [SKMutablePayment paymentWithProduct:product];
+                [[SKPaymentQueue defaultQueue] addPayment:payment];
+                break;
+            }
 	}
 	else
 	{
