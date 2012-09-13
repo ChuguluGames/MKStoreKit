@@ -98,4 +98,6 @@
 - (void) requestProductData;
 - (void) startVerifyingSubscriptionReceipts;
 
+- (SKProduct *) productForIdentifier:(NSString*)identifier;
+
 @end

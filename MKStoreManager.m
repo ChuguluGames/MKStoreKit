@@ -52,7 +52,7 @@
 
 - (void) startVerifyingSubscriptionReceipts;
 -(void) rememberPurchaseOfProduct:(NSString*) productIdentifier;
--(void) addToQueue:(NSString*) productId;
+-(void) addToQueue:(SKProduct *)product;
 @end
 
 @implementation MKStoreManager
@@ -405,48 +405,57 @@ NSString *upgradePrice = [prices objectForKey:@"com.mycompany.upgrade"]
     self.onTransactionError     = errorBlock;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-    [MKSKProduct verifyProductForReviewAccess:featureId
-                                   onComplete:^(NSNumber * isAllowed)
-     {
-         if([isAllowed boolValue])
+        SKProduct* product = [self productForIdentifier:featureId];
+        if (product == nil) {
+            if (self.onTransactionError)
+                self.onTransactionError(nil);
+            return;
+        }
+        [MKSKProduct verifyProductForReviewAccess:featureId
+                                       onComplete:^(NSNumber * isAllowed)
          {
-             UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Review request approved", @"")
-                                                             message:NSLocalizedString(@"You can use this feature for reviewing the app.", @"")
-                                                            delegate:self 
-                                                   cancelButtonTitle:NSLocalizedString(@"Dismiss", @"")
-                                                   otherButtonTitles:nil];
-             [alert show];
-             [alert release];
-             
-             if (self.onTransactionCompleted) {
-                 self.onTransactionCompleted(featureId);
-                 self.onTransactionCompleted = nil;
+             if([isAllowed boolValue])
+             {
+                 UIAlertView *alert = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Review request approved", @"")
+                                                                 message:NSLocalizedString(@"You can use this feature for reviewing the app.", @"")
+                                                                delegate:self 
+                                                       cancelButtonTitle:NSLocalizedString(@"Dismiss", @"")
+                                                       otherButtonTitles:nil];
+                 [alert show];
+                 [alert release];
+                 
+                 if (self.onTransactionCompleted) {
+                     self.onTransactionCompleted(featureId);
+                     self.onTransactionCompleted = nil;
+                 }
              }
+             else
+             {
+                 [self addToQueue:product];
+             }
+             
          }
-         else
+                                          onError:^(NSError* error)
          {
-             [self addToQueue:featureId];
-         }
-         
-     }
-                                      onError:^(NSError* error)
-     {
-         NSLog(@"Review request cannot be checked now: %@", [error description]);
-         [self addToQueue:featureId];
-     }];
+             NSLog(@"Review request cannot be checked now: %@", [error description]);
+             [self addToQueue:product];
+         }];
     });
 }
 
--(void) addToQueue:(NSString*) productId
+- (SKProduct *) productForIdentifier:(NSString*)identifier {
+    for (SKProduct* product in self.purchasableObjects)
+        if ([product.productIdentifier isEqualToString:identifier])
+            return product;
+    return nil;
+}
+
+-(void) addToQueue:(SKProduct *)product
 {
     if ([SKPaymentQueue canMakePayments])
 	{
-        for (SKProduct* product in self.purchasableObjects)
-            if ([product.productIdentifier isEqualToString:productId]) {
-                SKMutablePayment* payment = [SKMutablePayment paymentWithProduct:product];
-                [[SKPaymentQueue defaultQueue] addPayment:payment];
-                break;
-            }
+        SKMutablePayment* payment = [SKMutablePayment paymentWithProduct:product];
+        [[SKPaymentQueue defaultQueue] addPayment:payment];
 	}
 	else
 	{
