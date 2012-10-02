@@ -8,7 +8,6 @@
  *  Copyright 	Chugulu 2009-2011. All rights reserved.
  *******************************************************************************/
 
-#import "JSONKit.h"
 #import "NSDictionary+data.h"
 #import "MKSKRequestAdapterNSURLConnection.h"
 
@@ -144,7 +143,7 @@ didReceiveResponse:(NSURLResponse *)response
     if ([self isXML])
         responseData = [NSDictionary dictionaryWithData:_receivedData error:&parsingError];
     else if ([self isJSON])
-        responseData = [_receivedData objectFromJSONDataWithParseOptions:JKParseOptionStrict error:&parsingError];
+        responseData = [NSJSONSerialization JSONObjectWithData:_receivedData options:0 error:&parsingError];
     if (responseData != nil)
         isSuccess = _isResponseOK ? _isResponseOK(responseData) : parsingError == nil;
     else
